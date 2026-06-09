@@ -1,0 +1,14 @@
+torch==2.2.0
+torchvision==0.17.0
+transformers==4.38.0
+accelerate==0.27.0
+pydicom==3.0.1
+SimpleITK==2.4.0
+nibabel==5.2.1
+scikit-image==0.22.0
+opencv-python-headless==4.9.0
+numpy==1.26.4
+pillow==10.2.0
+fastapi==0.110.0
+uvicorn==0.29.0
+pydantic==2.6.4

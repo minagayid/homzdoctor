@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # HomzDoctor API
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://homzdoctor:***@postgres:5432/homzdoctor
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - homzdoctor
+
+  # React Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    networks:
+      - homzdoctor
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: homzdoctor
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: homzdoctor
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - homzdoctor
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - homzdoctor
+
+  # ML Inference Server
+  ml-server:
+    build:
+      context: ../ml
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ml-models:/app/models
+    networks:
+      - homzdoctor
+
+volumes:
+  postgres_data:
+
+networks:
+  homzdoctor:
+    driver: bridge
