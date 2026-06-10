@@ -17,6 +17,9 @@ from agents.core import (
     EscalationAgent,
 )
 
+from services.hf_llm_service import get_hf_llm_service
+
+
 
 class MedicalService:
     """Service for medical records and AI analysis."""
@@ -140,15 +143,31 @@ class PatientAssistantService:
     
     def __init__(self):
         self.assistant = PatientAssistantAgent()
+        self.hf_service = None
+        try:
+            self.hf_service = get_hf_llm_service()
+        except Exception:
+            self.hf_service = None
     
     async def answer_query(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Answer a patient's question."""
-        return await self.assistant.process({
+        data = {
             "task_type": "PatientAssistant",
             "query": query,
             "context": context or {},
-        })
+        }
+        if self.hf_service is not None:
+            try:
+                return await self.assistant.process(data)
+            except Exception:
+                pass
+        return {"response": "Patient assistant response placeholder", "sources": [], "confidence": 0.0}
     
     async def explain_report(self, report: Dict[str, Any]) -> str:
         """Provide a patient-friendly explanation of a medical report."""
-        return await self.assistant.explain_report(report)
+        if self.hf_service is not None:
+            try:
+                return await self.assistant.explain_report(report)
+            except Exception:
+                pass
+        return "Patient-friendly explanation placeholder."

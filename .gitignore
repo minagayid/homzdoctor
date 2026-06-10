@@ -1,0 +1,66 @@
+# HomzDoctor Git Ignore
+
+# Development environment
+.env
+.env*.local
+
+# Dependencies
+**/node_modules/
+**/venv/
+**/__pycache__/
+**/.cache/
+pm-cache/
+
+# Build outputs
+**/dist/
+**/build/
+**/.vite/
+**/.next/
+**/target/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+**/.mypy_cache/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Database
+**/*.sqlite3
+**/*.db
+
+# Uploads
+**/uploads/
+**/.agent/
+
+# Logs
+**/*.log
+
+# Test coverage
+**/coverage/
+**/.nyc_output/
+**/.nyc*
+
+# Sensitive files
+*.pem
+*.ppk
+*.key
+*.crt
+*.pfx
+
+# Local overrides
+*~.
+
+env.d.ts
