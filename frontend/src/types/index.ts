@@ -61,3 +61,6 @@ export interface MedicationAdherence {
   status: string;
   takenAt?: string;
 }
+
+// Request/response payload types.
+export * from './api';

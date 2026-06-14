@@ -6,7 +6,9 @@ import os
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-load_dotenv()
+# override=True so this project's .env wins over any global env vars (e.g. a
+# system-wide DATABASE_URL left over from another project).
+load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
@@ -40,6 +42,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        extra = "ignore"  # tolerate extra env vars (HF_*, UPLOAD_DIR, etc.) read elsewhere via os.getenv
 
 
 settings = Settings()
