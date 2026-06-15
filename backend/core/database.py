@@ -8,11 +8,19 @@ from sqlalchemy.pool import NullPool
 
 from core.config import settings
 
-# Create async engine
+# SQLite needs check_same_thread disabled for async use; other drivers take no extra args.
+connect_args = (
+    {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+)
+
+# Create async engine. The driver is chosen entirely by DATABASE_URL:
+#   - prototype: sqlite+aiosqlite:///./homzdoctor.db
+#   - production: postgresql+asyncpg://user:pass@host:5432/dbname
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     poolclass=NullPool,
+    connect_args=connect_args,
 )
 
 # Create async session
@@ -37,6 +45,9 @@ async def get_db():
 
 async def init_db():
     """Initialize database tables."""
+    # Import models so their tables register on Base.metadata before create_all.
+    import models.medical  # noqa: F401
+
     async with engine.begin() as conn:
         # Create tables
         await conn.run_sync(Base.metadata.create_all)

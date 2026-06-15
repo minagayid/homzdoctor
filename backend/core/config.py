@@ -25,10 +25,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    # Database
+    # Database — defaults to a local SQLite file for prototyping.
+    # Set DATABASE_URL in .env to a postgresql+asyncpg URL for production.
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "postgresql://homzdoctor:homzdoctor@localhost:5432/homzdoctor"
+        "DATABASE_URL",
+        "sqlite+aiosqlite:///./homzdoctor.db",
     )
     
     # Redis
