@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Button, Input } from '../../components/ui';
+import { Button, Input, PasswordInput } from '../../components/ui';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { PATHS } from '../../routes/paths';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login({ email, password });
-      navigate(PATHS.dashboard);
+      navigate(from ?? PATHS.dashboard, { replace: true });
     } catch {
       setError('Login failed. Check your credentials.');
     } finally {
@@ -38,9 +40,8 @@ export function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <Input
+        <PasswordInput
           label="Password"
-          type="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

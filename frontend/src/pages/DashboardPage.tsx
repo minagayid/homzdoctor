@@ -1,18 +1,39 @@
-import { Activity, FileText, Pill, MapPin } from 'lucide-react';
+import { Activity, FileText, Pill, CalendarDays } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '../components/ui';
-
-const stats = [
-  { label: 'Records', value: '—', icon: FileText },
-  { label: 'Prescriptions', value: '—', icon: Pill },
-  { label: 'Pharmacies', value: '—', icon: MapPin },
-];
+import { useAuthStore } from '../store/authStore';
+import { recordsApi, prescriptionsApi, appointmentsApi } from '../api';
+import { QUERY_KEYS } from '../lib/constants';
 
 export function DashboardPage() {
+  const user = useAuthStore((s) => s.user);
+  const firstName = user?.fullName?.trim().split(' ')[0];
+
+  const records = useQuery({ queryKey: QUERY_KEYS.records, queryFn: recordsApi.list });
+  const prescriptions = useQuery({
+    queryKey: QUERY_KEYS.prescriptions,
+    queryFn: prescriptionsApi.list,
+  });
+  const appointments = useQuery({
+    queryKey: QUERY_KEYS.appointments,
+    queryFn: appointmentsApi.list,
+  });
+
+  const count = (q: { data?: unknown[]; isLoading: boolean }) =>
+    q.isLoading ? '…' : (q.data?.length ?? 0).toString();
+
+  const stats = [
+    { label: 'Records', value: count(records), icon: FileText },
+    { label: 'Prescriptions', value: count(prescriptions), icon: Pill },
+    { label: 'Appointments', value: count(appointments), icon: CalendarDays },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
-          <Activity className="h-6 w-6 text-teal-600" /> Dashboard
+          <Activity className="h-6 w-6 text-teal-600" />
+          {firstName ? `Welcome back, ${firstName}` : 'Dashboard'}
         </h1>
         <p className="mt-1 text-slate-600">Overview of your healthcare activity.</p>
       </div>

@@ -1,12 +1,21 @@
 import { apiClient } from './axios';
 import type { MedicalRecord, MessageResponse } from '../types';
 
+export interface MedicalRecordCreate {
+  recordType: string;
+  filePath: string;
+  findings?: string;
+  diagnosis?: string;
+}
+
 export const recordsApi = {
-  create: (record: Partial<MedicalRecord>) =>
-    apiClient.post<MessageResponse>('/medical/records', record).then((r) => r.data),
+  list: () => apiClient.get<MedicalRecord[]>('/medical/records').then((r) => r.data),
 
   getById: (id: number) =>
-    apiClient.get(`/medical/records/${id}`).then((r) => r.data),
+    apiClient.get<MedicalRecord>(`/medical/records/${id}`).then((r) => r.data),
+
+  create: (payload: MedicalRecordCreate) =>
+    apiClient.post<MedicalRecord>('/medical/records', payload).then((r) => r.data),
 
   uploadFile: (recordId: number, file: File) => {
     const form = new FormData();

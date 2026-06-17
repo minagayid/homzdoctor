@@ -1,13 +1,20 @@
 import { apiClient } from './axios';
-import type { MessageResponse } from '../types';
+import type { Appointment } from '../types';
+
+export interface AppointmentCreate {
+  reason: string;
+  scheduledTime: string;
+}
 
 export const appointmentsApi = {
-  create: (data: Record<string, unknown>) =>
-    apiClient.post<MessageResponse>('/appointments', data).then((r) => r.data),
+  list: () => apiClient.get<Appointment[]>('/appointments').then((r) => r.data),
 
   getById: (id: number) =>
-    apiClient.get(`/appointments/${id}`).then((r) => r.data),
+    apiClient.get<Appointment>(`/appointments/${id}`).then((r) => r.data),
+
+  create: (payload: AppointmentCreate) =>
+    apiClient.post<Appointment>('/appointments', payload).then((r) => r.data),
 
   cancel: (id: number) =>
-    apiClient.put(`/appointments/${id}/cancel`).then((r) => r.data),
+    apiClient.put<Appointment>(`/appointments/${id}/cancel`).then((r) => r.data),
 };

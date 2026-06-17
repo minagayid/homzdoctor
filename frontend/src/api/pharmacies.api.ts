@@ -1,9 +1,15 @@
 import { apiClient } from './axios';
-import type { PharmacySearchParams, MessageResponse } from '../types';
+import type { Pharmacy, MessageResponse } from '../types';
+
+export interface PharmacySearchParams {
+  lat?: number;
+  lon?: number;
+  radius_km?: number;
+}
 
 export const pharmaciesApi = {
-  search: (params: PharmacySearchParams) =>
-    apiClient.get('/pharmacies/search', { params }).then((r) => r.data),
+  search: (params: PharmacySearchParams = {}) =>
+    apiClient.get<Pharmacy[]>('/pharmacies/search', { params }).then((r) => r.data),
 
   inventory: (pharmacyId: number, drugName?: string) =>
     apiClient

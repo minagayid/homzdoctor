@@ -19,6 +19,14 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     await init_db()
+
+    # MOCK DATA — seed shared demo data (pharmacies + demo doctor). Remove for production.
+    from core.database import AsyncSessionLocal
+    from core.seed import seed_global
+
+    async with AsyncSessionLocal() as db:
+        await seed_global(db)
+
     yield
     # Shutdown
     pass

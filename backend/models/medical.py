@@ -98,7 +98,7 @@ class Pharmacy(Base):
 class MedicationAdherence(Base):
     """Medication adherence tracking model."""
     __tablename__ = "medication_adherence"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     prescription_id = Column(Integer, ForeignKey("prescriptions.id"), nullable=False)
     medication_name = Column(String(255), nullable=False)
@@ -107,3 +107,16 @@ class MedicationAdherence(Base):
     taken_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Appointment(Base):
+    """Doctor appointment model."""
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey("users.id"))
+    reason = Column(String(255))
+    scheduled_time = Column(DateTime, nullable=False)
+    status = Column(String(50), default="scheduled")  # scheduled, cancelled, completed
+    created_at = Column(DateTime, default=datetime.utcnow)

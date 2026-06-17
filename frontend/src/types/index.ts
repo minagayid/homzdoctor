@@ -62,5 +62,15 @@ export interface MedicationAdherence {
   takenAt?: string;
 }
 
+export interface Appointment {
+  id: number;
+  patientId: number;
+  doctorId?: number;
+  reason?: string;
+  scheduledTime: string;
+  status: string;
+  createdAt: string;
+}
+
 // Request/response payload types.
 export * from './api';

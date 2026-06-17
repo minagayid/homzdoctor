@@ -1,13 +1,21 @@
 import { apiClient } from './axios';
-import type { Prescription, MessageResponse } from '../types';
+import type { Prescription } from '../types';
+
+export interface PrescriptionCreate {
+  patientId: number;
+  recordId: number;
+  medications: Array<Record<string, unknown>>;
+}
 
 export const prescriptionsApi = {
-  create: (prescription: Partial<Prescription>) =>
-    apiClient.post<MessageResponse>('/prescriptions', prescription).then((r) => r.data),
+  list: () => apiClient.get<Prescription[]>('/prescriptions').then((r) => r.data),
 
   getById: (id: number) =>
-    apiClient.get(`/prescriptions/${id}`).then((r) => r.data),
+    apiClient.get<Prescription>(`/prescriptions/${id}`).then((r) => r.data),
+
+  create: (payload: PrescriptionCreate) =>
+    apiClient.post<Prescription>('/prescriptions', payload).then((r) => r.data),
 
   approve: (id: number) =>
-    apiClient.put(`/prescriptions/${id}/approve`).then((r) => r.data),
+    apiClient.put<Prescription>(`/prescriptions/${id}/approve`).then((r) => r.data),
 };

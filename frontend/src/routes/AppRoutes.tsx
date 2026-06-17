@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
+import { RequireAuth } from '../components/auth/RequireAuth';
 import { PATHS } from './paths';
 import LandingPage from '../pages/landing/LandingPage';
 import { DashboardPage } from '../pages/DashboardPage';
@@ -19,15 +20,17 @@ export function AppRoutes() {
       {/* Public marketing landing */}
       <Route path={PATHS.landing} element={<LandingPage />} />
 
-      {/* Authenticated app shell (mounted under /app) */}
-      <Route element={<Layout />}>
-        <Route path={PATHS.dashboard} element={<DashboardPage />} />
-        <Route path={PATHS.records} element={<RecordsPage />} />
-        <Route path={PATHS.prescriptions} element={<PrescriptionsPage />} />
-        <Route path={PATHS.pharmacies} element={<PharmaciesPage />} />
-        <Route path={PATHS.appointments} element={<AppointmentsPage />} />
-        <Route path={PATHS.chat} element={<ChatPage />} />
-        <Route path={PATHS.settings} element={<SettingsPage />} />
+      {/* Authenticated app shell (mounted under /app, guarded by RequireAuth) */}
+      <Route element={<RequireAuth />}>
+        <Route element={<Layout />}>
+          <Route path={PATHS.dashboard} element={<DashboardPage />} />
+          <Route path={PATHS.records} element={<RecordsPage />} />
+          <Route path={PATHS.prescriptions} element={<PrescriptionsPage />} />
+          <Route path={PATHS.pharmacies} element={<PharmaciesPage />} />
+          <Route path={PATHS.appointments} element={<AppointmentsPage />} />
+          <Route path={PATHS.chat} element={<ChatPage />} />
+          <Route path={PATHS.settings} element={<SettingsPage />} />
+        </Route>
       </Route>
 
       {/* Standalone (no shell) routes */}

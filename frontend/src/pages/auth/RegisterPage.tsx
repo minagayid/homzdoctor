@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Button, Input } from '../../components/ui';
+import { Button, Input, PasswordInput } from '../../components/ui';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { PATHS } from '../../routes/paths';
 import type { User } from '../../types';
@@ -50,9 +50,8 @@ export function RegisterPage() {
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           required
         />
-        <Input
+        <PasswordInput
           label="Password"
-          type="password"
           autoComplete="new-password"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
