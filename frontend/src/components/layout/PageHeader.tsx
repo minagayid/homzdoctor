@@ -14,8 +14,8 @@ interface PageHeaderProps {
  */
 export function PageHeader({ title, subtitle, icon: Icon, actions }: PageHeaderProps) {
   return (
-    <div className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/90 px-6 py-4 backdrop-blur">
-      <div className="flex items-center justify-between gap-4">
+    <div className="sticky top-0 z-10 flex h-20 items-center border-b border-slate-200 bg-slate-50/90 px-6 backdrop-blur">
+      <div className="flex w-full items-center justify-between gap-4">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
             {Icon && <Icon className="h-6 w-6 shrink-0 text-teal-600" />}

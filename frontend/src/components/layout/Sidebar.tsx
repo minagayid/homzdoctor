@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileText,
@@ -12,6 +12,7 @@ import {
   LogOut,
   User,
   ChevronsUpDown,
+  Stethoscope,
 } from 'lucide-react';
 import { PATHS } from '../../routes/paths';
 import { cn } from '../../lib/utils';
@@ -164,6 +165,18 @@ function UserMenu() {
 export function Sidebar() {
   return (
     <aside className="hidden h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white md:flex">
+      {/* Brand header */}
+      <div className="flex h-20 items-center border-b border-slate-200 px-4">
+        <Link to={PATHS.landing} className="flex items-center gap-2">
+          <div className="rounded-lg bg-teal-600 p-1.5">
+            <Stethoscope className="h-5 w-5 text-white" />
+          </div>
+          <span className="text-lg font-bold text-slate-900">
+            Homz<span className="text-teal-600">Doctor</span>
+          </span>
+        </Link>
+      </div>
+
       <nav className="flex-1 overflow-y-auto p-4">
         <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
           Menu
