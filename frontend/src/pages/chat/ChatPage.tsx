@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
 import { chatApi } from '../../api';
 import { Card, Button, Input, Spinner } from '../../components/ui';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { apiOrigin } from '../../config/env';
 
 export function ChatPage() {
@@ -21,8 +22,9 @@ export function ChatPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-slate-800">Patient Assistant</h1>
+    <>
+      <PageHeader title="Patient Assistant" />
+      <div className="space-y-4 p-6">
       <Card>
         <form onSubmit={handleSubmit} className="flex gap-2">
           <div className="flex-1">
@@ -45,6 +47,7 @@ export function ChatPage() {
           <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">{answer}</div>
         )}
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

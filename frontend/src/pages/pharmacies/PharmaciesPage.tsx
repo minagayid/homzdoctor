@@ -3,6 +3,7 @@ import { MapPin, Phone } from 'lucide-react';
 import { pharmaciesApi } from '../../api';
 import { QUERY_KEYS } from '../../lib/constants';
 import { Card, Badge, Spinner } from '../../components/ui';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export function PharmaciesPage() {
   const { data: pharmacies, isLoading, isError } = useQuery({
@@ -11,12 +12,12 @@ export function PharmaciesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Pharmacies</h1>
-        <p className="mt-1 text-slate-600">Find nearby pharmacies and check availability.</p>
-      </div>
-
+    <>
+      <PageHeader
+        title="Pharmacies"
+        subtitle="Find nearby pharmacies and check availability."
+      />
+      <div className="space-y-6 p-6">
       {isLoading ? (
         <div className="flex items-center gap-2 text-slate-500">
           <Spinner /> Loading pharmacies…
@@ -50,6 +51,7 @@ export function PharmaciesPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

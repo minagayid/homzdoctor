@@ -133,6 +133,57 @@ async def get_medical_record(
     return record
 
 
+@router.put("/medical/records/{record_id}", response_model=MedicalRecord)
+async def update_medical_record(
+    record_id: int,
+    payload: MedicalRecordUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Update fields of a medical record owned by the authenticated patient."""
+    record = (
+        await db.execute(
+            select(MedicalRecordModel).where(
+                MedicalRecordModel.id == record_id,
+                MedicalRecordModel.patient_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+    # Apply only the fields the client actually sent (partial update).
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(record, field, value)
+
+    await db.commit()
+    await db.refresh(record)
+    return record
+
+
+@router.delete("/medical/records/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_medical_record(
+    record_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Delete a medical record owned by the authenticated patient."""
+    record = (
+        await db.execute(
+            select(MedicalRecordModel).where(
+                MedicalRecordModel.id == record_id,
+                MedicalRecordModel.patient_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+    await db.delete(record)
+    await db.commit()
+
+
 @router.post("/medical/records/{record_id}/upload")
 async def upload_medical_file(record_id: int, file: UploadFile = File(...)):
     """Upload medical file (image, DICOM, PDF) for a record."""

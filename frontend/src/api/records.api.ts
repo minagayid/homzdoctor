@@ -8,6 +8,8 @@ export interface MedicalRecordCreate {
   diagnosis?: string;
 }
 
+export type MedicalRecordUpdate = Partial<MedicalRecordCreate>;
+
 export const recordsApi = {
   list: () => apiClient.get<MedicalRecord[]>('/medical/records').then((r) => r.data),
 
@@ -16,6 +18,12 @@ export const recordsApi = {
 
   create: (payload: MedicalRecordCreate) =>
     apiClient.post<MedicalRecord>('/medical/records', payload).then((r) => r.data),
+
+  update: (id: number, payload: MedicalRecordUpdate) =>
+    apiClient.put<MedicalRecord>(`/medical/records/${id}`, payload).then((r) => r.data),
+
+  remove: (id: number) =>
+    apiClient.delete<void>(`/medical/records/${id}`).then((r) => r.data),
 
   uploadFile: (recordId: number, file: File) => {
     const form = new FormData();

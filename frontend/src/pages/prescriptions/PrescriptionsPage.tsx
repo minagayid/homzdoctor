@@ -4,6 +4,7 @@ import { prescriptionsApi } from '../../api';
 import { QUERY_KEYS } from '../../lib/constants';
 import { formatDate } from '../../lib/utils';
 import { Card, Badge, Button, Spinner } from '../../components/ui';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 export function PrescriptionsPage() {
   const queryClient = useQueryClient();
@@ -19,12 +20,12 @@ export function PrescriptionsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Prescriptions</h1>
-        <p className="mt-1 text-slate-600">Doctor-approved prescriptions and medications.</p>
-      </div>
-
+    <>
+      <PageHeader
+        title="Prescriptions"
+        subtitle="Doctor-approved prescriptions and medications."
+      />
+      <div className="space-y-6 p-6">
       {isLoading ? (
         <div className="flex items-center gap-2 text-slate-500">
           <Spinner /> Loading prescriptions…
@@ -77,6 +78,7 @@ export function PrescriptionsPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

@@ -67,6 +67,16 @@ class MedicalRecordCreate(BaseModel):
     diagnosis: Optional[str] = None
 
 
+class MedicalRecordUpdate(BaseModel):
+    """Schema for updating a medical record. All fields optional (partial update)."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    record_type: Optional[str] = None
+    file_path: Optional[str] = None
+    findings: Optional[str] = None
+    diagnosis: Optional[str] = None
+
+
 class MedicalRecord(BaseModel):
     """Medical record response schema (serialized with camelCase keys)."""
     model_config = ConfigDict(

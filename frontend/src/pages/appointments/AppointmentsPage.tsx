@@ -6,6 +6,7 @@ import type { AppointmentCreate } from '../../api/appointments.api';
 import { QUERY_KEYS } from '../../lib/constants';
 import { formatDate } from '../../lib/utils';
 import { Card, Badge, Button, Input, Spinner } from '../../components/ui';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 const EMPTY_FORM: AppointmentCreate = { reason: '', scheduledTime: '' };
 
@@ -47,17 +48,17 @@ export function AppointmentsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Appointments</h1>
-          <p className="mt-1 text-slate-600">Schedule and manage your doctor appointments.</p>
-        </div>
-        <Button onClick={() => setShowForm((s) => !s)}>
-          <Plus className="h-4 w-4" /> Book appointment
-        </Button>
-      </div>
-
+    <>
+      <PageHeader
+        title="Appointments"
+        subtitle="Schedule and manage your doctor appointments."
+        actions={
+          <Button onClick={() => setShowForm((s) => !s)}>
+            <Plus className="h-4 w-4" /> Book appointment
+          </Button>
+        }
+      />
+      <div className="space-y-6 p-6">
       {showForm && (
         <Card>
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
@@ -130,6 +131,7 @@ export function AppointmentsPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
