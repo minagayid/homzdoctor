@@ -34,3 +34,13 @@ async def get_current_user(
             detail="User not found",
         )
     return user
+
+
+async def require_doctor(current_user: User = Depends(get_current_user)) -> User:
+    """Allow only users with the ``doctor`` (or ``admin``) role."""
+    if current_user.role not in ("doctor", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doctor access required",
+        )
+    return current_user

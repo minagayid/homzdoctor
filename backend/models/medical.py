@@ -23,6 +23,56 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class UserProfile(Base):
+    """Extended profile + preferences for a user (one-to-one with User).
+
+    Kept in a SEPARATE table so it is auto-created by ``create_all`` without an
+    ALTER migration on the existing ``users`` table. A row is created lazily the
+    first time a user opens their profile.
+    """
+    __tablename__ = "user_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+
+    # --- Common personal info (patients and doctors) ---
+    phone = Column(String(50))
+    # Stores the avatar IMAGE itself as a base64 data URL (compressed thumbnail),
+    # so it lives entirely in the database — no filesystem needed. Text, not a
+    # bounded VARCHAR, because encoded images exceed any small length.
+    avatar_url = Column(Text)
+    bio = Column(Text)
+    gender = Column(String(20))
+    date_of_birth = Column(String(20))  # ISO date string (kept simple)
+    address = Column(Text)
+    city = Column(String(120))
+    country = Column(String(120))
+
+    # --- Doctor-specific info (only meaningful when user.role == "doctor") ---
+    specialty = Column(String(120))
+    license_number = Column(String(120))
+    hospital = Column(String(255))
+    years_experience = Column(Integer)
+    qualifications = Column(Text)
+    consultation_fee = Column(String(50))
+
+    # --- Preferences ---
+    language = Column(String(20), default="en")
+    timezone = Column(String(60), default="UTC")
+    theme = Column(String(20), default="system")  # light, dark, system
+
+    # --- Notification settings ---
+    notify_email = Column(Boolean, default=True)
+    notify_sms = Column(Boolean, default=False)
+    notify_push = Column(Boolean, default=True)
+    notify_whatsapp = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+
+
 class MedicalRecord(Base):
     """Medical record model."""
     __tablename__ = "medical_records"

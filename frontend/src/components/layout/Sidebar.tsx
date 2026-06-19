@@ -4,6 +4,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileText,
+  ScanLine,
   Pill,
   MapPin,
   CalendarDays,
@@ -20,19 +21,27 @@ import { useAuthStore } from '../../store/authStore';
 
 type NavItem = { to: string; label: string; icon: ComponentType<{ className?: string }> };
 
-const menu: NavItem[] = [
+const PATIENT_MENU: NavItem[] = [
   { to: PATHS.dashboard, label: 'Dashboard', icon: LayoutDashboard },
   { to: PATHS.records, label: 'Records', icon: FileText },
+  { to: PATHS.diagnosis, label: 'AI Diagnosis', icon: ScanLine },
   { to: PATHS.prescriptions, label: 'Prescriptions', icon: Pill },
   { to: PATHS.pharmacies, label: 'Pharmacies', icon: MapPin },
   { to: PATHS.appointments, label: 'Appointments', icon: CalendarDays },
   { to: PATHS.chat, label: 'Assistant', icon: Bot },
 ];
 
-function Avatar({ initials }: { initials: string }) {
+const DOCTOR_MENU: NavItem[] = [
+  { to: PATHS.doctor, label: 'Console', icon: Stethoscope },
+  { to: PATHS.prescriptions, label: 'Prescriptions', icon: Pill },
+  { to: PATHS.appointments, label: 'Appointments', icon: CalendarDays },
+  { to: PATHS.chat, label: 'Assistant', icon: Bot },
+];
+
+function Avatar({ initials, src }: { initials: string; src?: string }) {
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">
-      {initials}
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-teal-600 text-sm font-semibold text-white">
+      {src ? <img src={src} alt="Profile" className="h-full w-full object-cover" /> : initials}
     </div>
   );
 }
@@ -109,7 +118,7 @@ function UserMenu() {
         <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
           {/* Header */}
           <div className="flex items-center gap-3 px-3 py-3">
-            <Avatar initials={initials} />
+            <Avatar initials={initials} src={user?.avatarUrl} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
               <p className="truncate text-xs text-slate-500">{email}</p>
@@ -117,7 +126,7 @@ function UserMenu() {
           </div>
           <div className="h-px bg-slate-100" />
           <div className="p-1">
-            <button type="button" onClick={() => goTo(PATHS.settings)} className={menuItemClass}>
+            <button type="button" onClick={() => goTo(PATHS.profile)} className={menuItemClass}>
               <User className="h-4 w-4 text-slate-500" />
               View profile
             </button>
@@ -151,7 +160,7 @@ function UserMenu() {
           open && 'bg-slate-100',
         )}
       >
-        <Avatar initials={initials} />
+        <Avatar initials={initials} src={user?.avatarUrl} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
           <p className="truncate text-xs text-slate-500">{email}</p>
@@ -163,6 +172,8 @@ function UserMenu() {
 }
 
 export function Sidebar() {
+  const role = useAuthStore((s) => s.user?.role);
+  const menu = role === 'doctor' || role === 'admin' ? DOCTOR_MENU : PATIENT_MENU;
   return (
     <aside className="hidden h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white md:flex">
       {/* Brand header */}

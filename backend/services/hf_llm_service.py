@@ -13,7 +13,7 @@ try:
 except Exception:
     InferenceClient = None
 
-DEFAULT_MODEL = os.getenv("HF_MODEL", "Qwen/Qwen3-4B-Instruct")
+DEFAULT_MODEL = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
 DEFAULT_TOKEN = os.getenv("HF_TOKEN", "")
 HF_TIMEOUT = int(os.getenv("HF_TIMEOUT", "60"))
 

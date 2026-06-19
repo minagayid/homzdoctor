@@ -10,13 +10,14 @@ export function useAuth() {
     const data = await authApi.login(payload);
     setAuth(data.access_token);
     // Token is now stored, so the axios interceptor will attach it here.
+    let profile = null;
     try {
-      const profile = await authApi.me();
+      profile = await authApi.me();
       setUser(profile);
     } catch {
       // Profile fetch is best-effort; the session is still valid.
     }
-    return data;
+    return { ...data, user: profile };
   };
 
   const register = (payload: UserCreate) => authApi.register(payload);

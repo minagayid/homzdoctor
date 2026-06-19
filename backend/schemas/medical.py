@@ -51,6 +51,82 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ProfileUpdate(BaseModel):
+    """Editable profile fields (all optional — partial update). camelCase accepted."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    # Updates the user row:
+    full_name: Optional[str] = None
+    # Profile rows:
+    phone: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    # Doctor-specific:
+    specialty: Optional[str] = None
+    license_number: Optional[str] = None
+    hospital: Optional[str] = None
+    years_experience: Optional[int] = None
+    qualifications: Optional[str] = None
+    consultation_fee: Optional[str] = None
+    # Preferences:
+    language: Optional[str] = None
+    timezone: Optional[str] = None
+    theme: Optional[str] = None
+    # Notifications:
+    notify_email: Optional[bool] = None
+    notify_sms: Optional[bool] = None
+    notify_push: Optional[bool] = None
+    notify_whatsapp: Optional[bool] = None
+
+
+class Profile(BaseModel):
+    """Full profile response: user identity + extended profile (camelCase keys)."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    # Identity (from the users table)
+    id: int
+    email: str
+    full_name: str
+    role: str
+    is_active: bool = True
+    created_at: datetime
+    # Extended profile (from user_profiles)
+    phone: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    specialty: Optional[str] = None
+    license_number: Optional[str] = None
+    hospital: Optional[str] = None
+    years_experience: Optional[int] = None
+    qualifications: Optional[str] = None
+    consultation_fee: Optional[str] = None
+    language: str = "en"
+    timezone: str = "UTC"
+    theme: str = "system"
+    notify_email: bool = True
+    notify_sms: bool = False
+    notify_push: bool = True
+    notify_whatsapp: bool = False
+
+
+class PasswordChange(BaseModel):
+    """Change-password request."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    current_password: str
+    new_password: str
+
+
 class Token(BaseModel):
     """JWT access token response."""
     access_token: str
@@ -106,9 +182,20 @@ class DoctorReview(BaseModel):
     notes: Optional[str] = None
     prescription: Optional[dict] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
+
+
+class DoctorReviewAction(BaseModel):
+    """Payload a doctor submits when reviewing a record (camelCase accepted)."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    action: str  # approve | modify | reject
+    notes: Optional[str] = None
+    diagnosis: Optional[str] = None       # optional clinician override
+    findings: Optional[str] = None        # optional clinician override
+    prescription: Optional[dict] = None
 
 
 class PrescriptionCreate(BaseModel):
@@ -171,6 +258,15 @@ class AppointmentCreate(BaseModel):
 
     reason: str
     scheduled_time: datetime
+
+
+class AppointmentUpdate(BaseModel):
+    """Schema for editing an appointment. All fields optional (partial update)."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    reason: Optional[str] = None
+    scheduled_time: Optional[datetime] = None
+    status: Optional[str] = None
 
 
 class Appointment(BaseModel):

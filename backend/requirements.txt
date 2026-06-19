@@ -10,4 +10,6 @@ python-jose==3.3.0
 python-multipart==0.0.9
 httpx==0.27.0
 python-dotenv==1.0.1
-huggingface_hub==0.23.0
+huggingface_hub>=0.34,<1.0   # InferenceClient w/ multimodal chat_completion (LVLM). >=0.34 uses the modern provider router (old 0.23 hit the retired api-inference.huggingface.co host); <1.0 stays compatible with transformers/fastembed if installed in the same env.
+pillow>=10.4             # image normalisation for the vision agent
+pymupdf>=1.25.0          # render lab-report PDFs to images + extract text (py3.13 wheels)

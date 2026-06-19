@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
@@ -94,6 +94,9 @@ export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const isDoctor = user?.role === 'doctor';
   const firstName = user?.fullName?.trim().split(' ')[0];
+
+  // Doctors get their own dashboard — send them there.
+  if (isDoctor) return <Navigate to={PATHS.doctor} replace />;
 
   const records = useQuery({ queryKey: QUERY_KEYS.records, queryFn: recordsApi.list });
   const prescriptions = useQuery({

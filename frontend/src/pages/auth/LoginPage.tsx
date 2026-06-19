@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button, Input, PasswordInput } from '../../components/ui';
 import { AuthLayout } from '../../components/auth/AuthLayout';
-import { PATHS } from '../../routes/paths';
+import { PATHS, roleHome } from '../../routes/paths';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -20,8 +20,9 @@ export function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await login({ email, password });
-      navigate(from ?? PATHS.dashboard, { replace: true });
+      const result = await login({ email, password });
+      // Prefer the page the user was bounced from; otherwise their role's home.
+      navigate(from ?? roleHome(result.user?.role), { replace: true });
     } catch {
       setError('Login failed. Check your credentials.');
     } finally {

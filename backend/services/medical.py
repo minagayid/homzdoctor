@@ -16,6 +16,9 @@ from agents.core import (
     PatientAssistantAgent,
     EscalationAgent,
 )
+from agents.lvlm_agent import LVLMDiagnosticAgent
+from agents.pharmacy_agent import LLMPharmacyAgent
+from agents.llm_agent import LLMPatientAssistantAgent
 
 from services.hf_llm_service import get_hf_llm_service
 
@@ -60,22 +63,71 @@ class MedicalService:
         return []
 
 
-class PharmacyService:
-    """Service for pharmacy-related operations."""
-    
+class LVLMDiagnosticService:
+    """Service wrapping the Large Vision-Language Model diagnostic agent.
+
+    Reads X-ray / CT / MRI images and lab PDFs, runs the three-pass
+    (diagnose -> recheck -> finalise) pipeline, and always returns a result
+    flagged for mandatory doctor review.
+    """
+
     def __init__(self):
+        self.agent = LVLMDiagnosticAgent()
+
+    @property
+    def available(self) -> bool:
+        return self.agent.available()
+
+    async def analyze_file(
+        self,
+        file_bytes: bytes,
+        filename: str,
+        modality: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Run the LVLM pipeline on an uploaded image/PDF."""
+        return await self.agent.process(
+            {
+                "file_bytes": file_bytes,
+                "filename": filename,
+                "modality": modality,
+            }
+        )
+
+    async def analyze_path(self, file_path: str, modality: Optional[str] = None) -> Dict[str, Any]:
+        """Run the LVLM pipeline on a file already stored on disk."""
+        return await self.agent.process({"file_path": file_path, "modality": modality})
+
+
+class PharmacyService:
+    """Service for pharmacy-related operations (LLM-coordinated)."""
+
+    def __init__(self):
+        # Keep the original stub agent for backward-compatible inventory calls.
         self.pharmacy_agent = PharmacyAgent()
-    
-    async def find_nearby_pharmacies(self, lat: float, lon: float, radius_km: int = 5) -> List[Dict[str, Any]]:
-        """Find pharmacies near a location."""
-        return await self.pharmacy_agent.process({
-            "task_type": "Pharmacy",
+        # The new LLM agent handles real distance ranking + ordering.
+        self.llm_agent = LLMPharmacyAgent()
+
+    async def find_nearby_pharmacies(
+        self,
+        lat: Optional[float],
+        lon: Optional[float],
+        radius_km: int = 5,
+        pharmacies: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Find pharmacies near a location, ranked by distance.
+
+        ``pharmacies`` is the candidate list from the DB; the agent ranks it by
+        real distance (or, if GOOGLE_MAPS_API_KEY is set and no list is given,
+        queries Google Places live).
+        """
+        return await self.llm_agent.process({
             "action": "search",
             "latitude": lat,
             "longitude": lon,
             "radius_km": radius_km,
+            "pharmacies": pharmacies or [],
         })
-    
+
     async def check_medication_availability(self, pharmacy_id: int, drug_name: str) -> bool:
         """Check if a medication is available at a pharmacy."""
         result = await self.pharmacy_agent.process({
@@ -85,18 +137,21 @@ class PharmacyService:
             "drug_name": drug_name,
         })
         return result.get("available", False)
-    
-    async def place_order(self, pharmacy_id: int, prescription: Dict[str, Any]) -> Dict[str, Any]:
-        """Place a medication order (after patient confirmation)."""
-        # Verify patient confirmation
-        if not prescription.get("patient_confirmed"):
-            return {"error": "Patient confirmation required", "order_placed": False}
-        
-        return await self.pharmacy_agent.process({
-            "task_type": "Pharmacy",
+
+    async def place_order(
+        self,
+        pharmacy: Dict[str, Any],
+        prescription: Dict[str, Any],
+        patient_confirmed: bool = False,
+        order_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Drive the ordering procedure (guardrails enforced inside the agent)."""
+        return await self.llm_agent.process({
             "action": "order",
-            "pharmacy_id": pharmacy_id,
+            "pharmacy": pharmacy,
             "prescription": prescription,
+            "patient_confirmed": patient_confirmed,
+            "order_id": order_id,
         })
 
 
@@ -139,35 +194,28 @@ class EscalationService:
 
 
 class PatientAssistantService:
-    """Service for patient assistant interactions."""
-    
+    """Service for patient assistant interactions (real LLM-backed)."""
+
     def __init__(self):
-        self.assistant = PatientAssistantAgent()
-        self.hf_service = None
-        try:
-            self.hf_service = get_hf_llm_service()
-        except Exception:
-            self.hf_service = None
-    
+        # The real HF LLM-backed agent (falls back to canned answers if the
+        # model backend is unavailable — see LLMPatientAssistantAgent).
+        self.assistant = LLMPatientAssistantAgent()
+
     async def answer_query(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Answer a patient's question."""
-        data = {
-            "task_type": "PatientAssistant",
-            "query": query,
-            "context": context or {},
-        }
-        if self.hf_service is not None:
-            try:
-                return await self.assistant.process(data)
-            except Exception:
-                pass
-        return {"response": "Patient assistant response placeholder", "sources": [], "confidence": 0.0}
-    
+        """Answer a patient's question via the LLM assistant."""
+        data = {"query": query, "context": context or {}}
+        try:
+            return await self.assistant.process(data)
+        except Exception:
+            return {
+                "response": "Sorry, the assistant is temporarily unavailable. Please try again.",
+                "sources": [],
+                "confidence": 0.0,
+            }
+
     async def explain_report(self, report: Dict[str, Any]) -> str:
         """Provide a patient-friendly explanation of a medical report."""
-        if self.hf_service is not None:
-            try:
-                return await self.assistant.explain_report(report)
-            except Exception:
-                pass
-        return "Patient-friendly explanation placeholder."
+        try:
+            return await self.assistant.explain_report(report)
+        except Exception:
+            return "I can give a simplified overview, but only your clinician can explain your exact results."

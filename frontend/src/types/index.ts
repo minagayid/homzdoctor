@@ -5,6 +5,8 @@ export interface User {
   role: 'patient' | 'doctor' | 'admin';
   isActive: boolean;
   createdAt: string;
+  /** Base64 data URL of the profile picture (synced from the profile API). */
+  avatarUrl?: string;
 }
 
 export interface MedicalRecord {

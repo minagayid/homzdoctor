@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     
     # AI/ML
     MEDGEMMA_MODEL_PATH: str = os.getenv("MEDGEMMA_MODEL_PATH", "./ml/models/medgemma")
+    # Hugging Face agents (also read directly via os.getenv in the agent modules).
+    HF_TOKEN: str = os.getenv("HF_TOKEN", "")
+    HF_MODEL: str = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
+    HF_VLM_MODEL: str = os.getenv("HF_VLM_MODEL", "google/gemma-3-27b-it")
+    GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
     
     class Config:
         env_file = str(BASE_DIR / ".env")  # absolute, so it loads from any CWD

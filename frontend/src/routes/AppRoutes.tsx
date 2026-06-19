@@ -4,11 +4,14 @@ import { RequireAuth } from '../components/auth/RequireAuth';
 import { PATHS } from './paths';
 import LandingPage from '../pages/landing/LandingPage';
 import { DashboardPage } from '../pages/DashboardPage';
+import { DoctorDashboardPage } from '../pages/doctor/DoctorDashboardPage';
 import { RecordsPage } from '../pages/records/RecordsPage';
+import { DiagnosisPage } from '../pages/ai/DiagnosisPage';
 import { PrescriptionsPage } from '../pages/prescriptions/PrescriptionsPage';
 import { PharmaciesPage } from '../pages/pharmacies/PharmaciesPage';
 import { AppointmentsPage } from '../pages/appointments/AppointmentsPage';
 import { ChatPage } from '../pages/chat/ChatPage';
+import { ProfilePage } from '../pages/profile/ProfilePage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
@@ -24,11 +27,14 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route path={PATHS.dashboard} element={<DashboardPage />} />
+          <Route path={PATHS.doctor} element={<DoctorDashboardPage />} />
           <Route path={PATHS.records} element={<RecordsPage />} />
+          <Route path={PATHS.diagnosis} element={<DiagnosisPage />} />
           <Route path={PATHS.prescriptions} element={<PrescriptionsPage />} />
           <Route path={PATHS.pharmacies} element={<PharmaciesPage />} />
           <Route path={PATHS.appointments} element={<AppointmentsPage />} />
           <Route path={PATHS.chat} element={<ChatPage />} />
+          <Route path={PATHS.profile} element={<ProfilePage />} />
           <Route path={PATHS.settings} element={<SettingsPage />} />
         </Route>
       </Route>
