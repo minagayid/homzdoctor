@@ -199,6 +199,22 @@ docker-compose down
 docker-compose down -v  # Also remove volumes
 ```
 
+## Railway Deployment
+
+### Backend (`homzdoctor` service)
+
+- Root Directory must be set to `backend` and Builder must be `Dockerfile` (pinned explicitly in `backend/railway.json` — do not rely on Railpack auto-detection, which only scans the service's Root Directory for `main.py`/`app.py` and will fail with "No start command detected" if Root Directory is left at the repo root).
+- The repo root must **not** contain a stray `requirements.txt` — Railpack treats its presence as "this is a Python project root" and then fails to find an entrypoint, since the real app lives in `backend/`.
+
+### Frontend (`loyal-vitality` service)
+
+`frontend/nginx.conf.template` proxies `/api` and `/ws` to the backend via `BACKEND_HOST`/`BACKEND_PORT` env vars (substituted at container start by nginx's built-in `envsubst-on-templates` entrypoint script). Set these on the `loyal-vitality` service:
+
+- `BACKEND_HOST` = `${{homzdoctor.RAILWAY_PRIVATE_DOMAIN}}` (Railway reference variable to the backend's private networking domain)
+- `BACKEND_PORT` = `${{homzdoctor.PORT}}`
+
+Do not hardcode a static hostname (e.g. the docker-compose service name `api`) — nginx resolves `proxy_pass` hosts once at config load, and an unresolvable static host causes a hard crash (`host not found in upstream`) that crash-loops the container. The config instead resolves the backend at request time via `resolver ${NGINX_LOCAL_RESOLVERS}` + a `set`-based `proxy_pass`, so nginx starts and serves the static frontend even if the backend is briefly unavailable.
+
 ## Kubernetes Deployment
 
 ### Prerequisites

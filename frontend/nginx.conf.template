@@ -1,0 +1,44 @@
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Resolve the backend host at request time (not at config load), so a
+    # briefly-unavailable or not-yet-resolvable backend never crash-loops nginx.
+    # NGINX_LOCAL_RESOLVERS is auto-populated from /etc/resolv.conf by the base
+    # nginx image's docker-entrypoint.d/15-local-resolvers.sh.
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        set $backend_upstream ${BACKEND_HOST}:${BACKEND_PORT};
+        proxy_pass http://$backend_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 5s;
+    }
+
+    location /ws {
+        set $backend_upstream ${BACKEND_HOST}:${BACKEND_PORT};
+        proxy_pass http://$backend_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_connect_timeout 5s;
+    }
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+}

@@ -12,7 +12,13 @@ RUN npm run build
 FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Defaults match the docker-compose service name/port for local dev.
+# On Railway, override BACKEND_HOST/BACKEND_PORT with the homzdoctor
+# service's private networking values (see DEPLOYMENT.md).
+ENV BACKEND_HOST=api
+ENV BACKEND_PORT=8000
 
 EXPOSE 80
 
