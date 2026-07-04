@@ -20,6 +20,11 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 ENV BACKEND_HOST=api
 ENV BACKEND_PORT=8000
 
+# Opt-in flag required by the base image's 15-local-resolvers.envsh: without
+# it, that script no-ops and NGINX_LOCAL_RESOLVERS is never exported, so
+# envsubst leaves "${NGINX_LOCAL_RESOLVERS}" un-substituted in nginx.conf.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
