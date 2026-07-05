@@ -40,7 +40,7 @@ const DOCTOR_MENU: NavItem[] = [
 
 function Avatar({ initials, src }: { initials: string; src?: string }) {
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-teal-600 text-sm font-semibold text-white">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-gradient text-sm font-semibold text-white shadow-soft">
       {src ? <img src={src} alt="Profile" className="h-full w-full object-cover" /> : initials}
     </div>
   );
@@ -53,13 +53,25 @@ function Item({ to, label, icon: Icon }: NavItem) {
       end={to === PATHS.dashboard}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
-          isActive ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-100',
+          'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
+          isActive
+            ? 'bg-brand-50 text-brand-700 shadow-soft'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
         )
       }
     >
-      <Icon className="h-4 w-4" />
-      {label}
+      {({ isActive }) => (
+        <>
+          <span
+            className={cn(
+              'absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-gradient transition-opacity',
+              isActive ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+          <Icon className={cn('h-4 w-4 transition', isActive ? 'text-brand-600' : 'text-slate-400 group-hover:text-slate-600')} />
+          {label}
+        </>
+      )}
     </NavLink>
   );
 }
@@ -178,12 +190,12 @@ export function Sidebar() {
     <aside className="hidden h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white md:flex">
       {/* Brand header */}
       <div className="flex h-20 items-center border-b border-slate-200 px-4">
-        <Link to={PATHS.landing} className="flex items-center gap-2">
-          <div className="rounded-lg bg-teal-600 p-1.5">
+        <Link to={PATHS.landing} className="flex items-center gap-2.5">
+          <div className="rounded-xl bg-brand-gradient p-2 shadow-glow">
             <Stethoscope className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-bold text-slate-900">
-            Homz<span className="text-teal-600">Doctor</span>
+          <span className="text-lg font-bold tracking-tight text-slate-900">
+            Homz<span className="text-gradient">Doctor</span>
           </span>
         </Link>
       </div>

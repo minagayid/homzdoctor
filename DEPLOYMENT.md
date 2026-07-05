@@ -215,6 +215,70 @@ docker-compose down -v  # Also remove volumes
 
 Do not hardcode a static hostname (e.g. the docker-compose service name `api`) — nginx resolves `proxy_pass` hosts once at config load, and an unresolvable static host causes a hard crash (`host not found in upstream`) that crash-loops the container. The config instead resolves the backend at request time via `resolver ${NGINX_LOCAL_RESOLVERS}` + a `set`-based `proxy_pass`, so nginx starts and serves the static frontend even if the backend is briefly unavailable.
 
+### ⚠️ Required services & environment variables (why the deploy "wasn't working")
+
+The app runs on Railway even with nothing configured, but it silently degrades:
+logins vanish and the AI returns canned answers. Fix all three below, then open
+`https://<backend-domain>/api/v1/status` — every subsystem should read
+`available: true` / `connected: true`.
+
+**1. Persistent database (fixes disappearing logins).**
+Without a database, the backend falls back to **SQLite on the container's
+ephemeral disk**, which Railway wipes on every redeploy — so every registered
+account is lost and login fails. Provision a real DB:
+
+- In your Railway project: **New → Database → Add PostgreSQL**.
+- On the `homzdoctor` backend service, add a reference variable:
+  `DATABASE_URL = ${{Postgres.DATABASE_URL}}`
+- That is all — the backend auto-rewrites `postgres://` → `postgresql+asyncpg://`,
+  strips libpq-only params (`sslmode`, `channel_binding`) that the async driver
+  rejects, and enables TLS for the managed host. See
+  `backend/core/config.py:normalize_database_url`.
+
+**2. AI models (fixes "no photo processing / no interactive LLM").**
+The VLM (medical image reading) and LLM (chat) agents use the Hugging Face
+Inference API. Without `HF_TOKEN` they return deterministic fallback text. Set on
+the backend service:
+
+- `HF_TOKEN` = a token from <https://huggingface.co/settings/tokens> (Read scope).
+- `HF_MODEL` = `meta-llama/Llama-3.1-8B-Instruct` (or another chat model you can access).
+- `HF_VLM_MODEL` = `Qwen/Qwen2.5-VL-7B-Instruct` (for a medical-tuned VLM, request
+  access to `google/medgemma-4b-it` on its model page, then use it here).
+
+  > Some models require an inference **provider**. If image analysis 404s, set
+  > `HF_VLM_PROVIDER` (e.g. `hf-inference`, `nebius`, `together`).
+
+**3. Vector DB / RAG (optional but recommended).**
+Qdrant grounds the assistant in a curated knowledge base + the patient's own
+records. Without it, chat still works but without retrieval.
+
+- **Managed:** create a free cluster at <https://cloud.qdrant.io>, then set on the
+  backend service: `QDRANT_URL = https://<cluster>.qdrant.io:6333` and
+  `QDRANT_API_KEY = <key>`.
+- **Self-hosted on Railway:** **New → Empty Service → Deploy from Docker image**
+  `qdrant/qdrant:latest`, attach a Volume at `/qdrant/storage`, then set
+  `QDRANT_URL = http://${{Qdrant.RAILWAY_PRIVATE_DOMAIN}}:6333` on the backend.
+- Embeddings use the same `HF_TOKEN` (model `EMBEDDING_MODEL`, default MiniLM /
+  `EMBEDDING_DIM=384`). The knowledge base is seeded automatically on startup.
+
+**Also set** `SECRET_KEY` (any 32+ char random string) so JWTs are stable across
+restarts.
+
+#### Quick reference — backend service variables
+
+| Variable | Required | Value |
+|----------|----------|-------|
+| `DATABASE_URL` | ✅ | `${{Postgres.DATABASE_URL}}` |
+| `SECRET_KEY` | ✅ | random 32+ chars |
+| `HF_TOKEN` | ✅ for AI | HF read token |
+| `HF_MODEL` | ✅ for AI | `meta-llama/Llama-3.1-8B-Instruct` |
+| `HF_VLM_MODEL` | ✅ for AI | `Qwen/Qwen2.5-VL-7B-Instruct` |
+| `QDRANT_URL` | ⬜ for RAG | Qdrant Cloud URL or private domain |
+| `QDRANT_API_KEY` | ⬜ for RAG | Qdrant Cloud key |
+| `ALLOWED_ORIGINS` | recommended | your frontend domain |
+
+After setting these, redeploy and verify: `curl https://<backend>/api/v1/status`.
+
 ## Kubernetes Deployment
 
 ### Prerequisites

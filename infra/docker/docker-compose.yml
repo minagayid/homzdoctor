@@ -1,37 +1,56 @@
 version: '3.8'
 
+# Local full-stack: frontend (nginx) -> api (FastAPI) -> postgres + qdrant + redis.
+# Copy ../../backend/.env.example to a .env next to this file (or export the vars)
+# and set HF_TOKEN to enable the AI agents. Then: `docker compose up --build`.
+
 services:
   # HomzDoctor API
   api:
     build:
-      context: ../backend
+      context: ../../backend
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://homzdoctor:***@postgres:5432/homzdoctor
+      # asyncpg driver + service hostname (config.normalize_database_url also
+      # accepts a plain postgresql:// URL and rewrites it).
+      - DATABASE_URL=postgresql+asyncpg://homzdoctor:password@postgres:5432/homzdoctor
       - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION=homzdoctor_knowledge
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - EMBEDDING_DIM=384
+      # AI models (Hugging Face Inference API). Set HF_TOKEN in your shell/.env.
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_MODEL=${HF_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
+      - HF_VLM_MODEL=${HF_VLM_MODEL:-Qwen/Qwen2.5-VL-7B-Instruct}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-me-32-characters-min}
     depends_on:
       - postgres
       - redis
+      - qdrant
     volumes:
       - ./uploads:/app/uploads
     networks:
       - homzdoctor
 
-  # React Frontend
+  # React Frontend (nginx proxies /api -> api:8000)
   frontend:
     build:
-      context: ../frontend
+      context: ../../frontend
       dockerfile: Dockerfile
     ports:
       - "3000:80"
+    environment:
+      - BACKEND_HOST=api
+      - BACKEND_PORT=8000
     depends_on:
       - api
     networks:
       - homzdoctor
 
-  # PostgreSQL Database
+  # PostgreSQL Database (persistent volume)
   postgres:
     image: postgres:15-alpine
     environment:
@@ -45,6 +64,16 @@ services:
     networks:
       - homzdoctor
 
+  # Qdrant Vector DB (RAG store)
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"  # REST/gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - homzdoctor
+
   # Redis Cache
   redis:
     image: redis:7-alpine
@@ -53,20 +82,9 @@ services:
     networks:
       - homzdoctor
 
-  # ML Inference Server
-  ml-server:
-    build:
-      context: ../ml
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./ml-models:/app/models
-    networks:
-      - homzdoctor
-
 volumes:
   postgres_data:
+  qdrant_data:
 
 networks:
   homzdoctor:
