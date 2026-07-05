@@ -7,7 +7,7 @@ export function Layout() {
     <div className="flex h-screen overflow-hidden bg-slate-50">
       <Sidebar />
       {/* Only this area scrolls; the sidebar stays fixed in place. */}
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="relative min-w-0 flex-1 overflow-y-auto bg-slate-50 bg-mesh">
         <Outlet />
       </main>
     </div>

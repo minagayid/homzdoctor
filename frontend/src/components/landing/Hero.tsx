@@ -4,18 +4,21 @@ import { Shield, Microscope, Sparkles, Brain, CheckCircle2, ShieldCheck, Activit
 export default function Hero() {
   return (
     <section className="relative overflow-hidden bg-white py-20 md:py-28">
+      {/* Ambient brand mesh background */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-mesh" />
+      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-brand-radial blur-2xl" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           {/* Left content */}
-          <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium mb-6">
+          <div className="text-center md:text-left animate-fade-up">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 mb-6">
               <Shield className="w-4 h-4" />
               Reviewed by licensed doctors
             </div>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight mb-6">
+
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-6">
               AI-powered care at home.{' '}
-              <span className="text-teal-600">Reviewed by real doctors.</span>
+              <span className="text-gradient">Reviewed by real doctors.</span>
             </h1>
             
             <p className="text-lg text-slate-600 mb-8 leading-relaxed max-w-lg mx-auto md:mx-0">
@@ -26,13 +29,13 @@ export default function Hero() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-8">
               <Link
                 to="/register"
-                className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium shadow-sm text-center"
+                className="rounded-xl bg-brand-gradient px-6 py-3 text-center font-medium text-white shadow-soft transition-all hover:shadow-glow hover:brightness-[1.03]"
               >
                 Start a symptom check →
               </Link>
               <Link
                 to="#how-it-works"
-                className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium text-center"
+                className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-center font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50"
               >
                 See how it works
               </Link>
@@ -52,9 +55,9 @@ export default function Hero() {
           </div>
           
           {/* Right: product UI mockup (no image asset required) */}
-          <div className="relative mt-12 md:mt-0">
+          <div className="relative mt-12 md:mt-0 animate-fade-up [animation-delay:120ms]">
             {/* Main AI analysis card */}
-            <div className="relative z-10 rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
+            <div className="relative z-10 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-elevated">
               {/* Card header */}
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -93,8 +96,17 @@ export default function Hero() {
                     strokeLinecap="round"
                   />
                 </svg>
-                <span className="absolute left-2 top-2 font-mono text-[10px] text-teal-300/80">
+                {/* Sweeping analysis line */}
+                <div className="absolute inset-x-0 top-0 h-8 animate-scan-sweep bg-gradient-to-b from-brand-400/40 to-transparent" />
+                <span className="absolute left-2 top-2 font-mono text-[10px] text-brand-300/80">
                   SCAN_0481.dcm
+                </span>
+                <span className="absolute right-2 top-2 flex items-center gap-1 font-mono text-[10px] text-brand-300/80">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-brand-400" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-400" />
+                  </span>
+                  ANALYZING
                 </span>
               </div>
 
@@ -129,7 +141,7 @@ export default function Hero() {
             </div>
 
             {/* Floating stat card */}
-            <div className="absolute -bottom-5 -left-5 z-20 hidden items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-lg sm:flex">
+            <div className="absolute -bottom-5 -left-5 z-20 hidden animate-float items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-elevated sm:flex">
               <div className="rounded-lg bg-emerald-50 p-1.5">
                 <Activity className="h-4 w-4 text-emerald-600" />
               </div>

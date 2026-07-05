@@ -2,16 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: 'Inter var', 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    @apply bg-slate-50 text-slate-900;
+  }
+
+  /* Consistent, accessible focus ring across interactive elements. */
+  :focus-visible {
+    outline: 2px solid theme('colors.brand.500');
+    outline-offset: 2px;
+  }
 }
 
-/* Smooth scrolling for anchor links */
-html {
-  scroll-behavior: smooth;
+@layer components {
+  /* Gradient brand text (headlines, logo accents). */
+  .text-gradient {
+    @apply bg-brand-gradient bg-clip-text text-transparent;
+  }
+
+  /* Frosted-glass surface for overlays / sticky headers. */
+  .glass {
+    @apply border border-white/60 bg-white/70 backdrop-blur-xl backdrop-saturate-150;
+  }
+
+  /* Card that lifts on hover — use on interactive cards/tiles. */
+  .card-hover {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-card;
+  }
+
+  /* Skeleton shimmer for loading states. */
+  .skeleton {
+    @apply relative overflow-hidden bg-slate-100;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent;
+  }
 }
 
-/* Fade animations for scroll triggering */
+/* --- Scroll-reveal animation (used by landing sections) --- */
 .fade-on-scroll {
   opacity: 0;
   transform: translateY(20px);
@@ -23,12 +60,33 @@ html {
   transform: translateY(0) !important;
 }
 
-/* Respect reduced motion */
+/* --- Refined custom scrollbar (app content areas) --- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.slate.300') transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  @apply rounded-full border-2 border-solid border-transparent bg-slate-300 bg-clip-content;
+}
+*::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 bg-clip-content;
+}
+
+/* Respect reduced motion. */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
   .fade-on-scroll {
     transition: none;
-  }
-  html {
-    scroll-behavior: auto;
   }
 }
