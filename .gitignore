@@ -64,3 +64,6 @@ __pycache__/
 *~.
 
 env.d.ts
+
+# Python virtualenvs (local only)
+**/.venv/

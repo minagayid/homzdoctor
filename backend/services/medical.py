@@ -194,24 +194,52 @@ class EscalationService:
 
 
 class PatientAssistantService:
-    """Service for patient assistant interactions (real LLM-backed)."""
+    """Service for patient assistant interactions (real LLM-backed + RAG)."""
 
     def __init__(self):
         # The real HF LLM-backed agent (falls back to canned answers if the
         # model backend is unavailable — see LLMPatientAssistantAgent).
         self.assistant = LLMPatientAssistantAgent()
+        # Vector store powers retrieval-augmented answers. Optional: if Qdrant
+        # or embeddings aren't configured, retrieval returns [] and the agent
+        # answers without grounded context.
+        from services.vector_store import get_vector_store
+
+        self.vector_store = get_vector_store()
 
     async def answer_query(self, query: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Answer a patient's question via the LLM assistant."""
-        data = {"query": query, "context": context or {}}
+        """Answer a patient's question via the LLM assistant, grounded with RAG."""
+        context = dict(context or {})
+        sources: List[Dict[str, Any]] = []
+
+        # Retrieve grounding snippets (curated KB + this patient's records).
         try:
-            return await self.assistant.process(data)
+            hits = await self.vector_store.search(query, top_k=4)
+        except Exception:
+            hits = []
+        if hits:
+            context["retrieved_knowledge"] = [
+                {"title": h.get("title") or h.get("source"), "text": h.get("text", "")}
+                for h in hits
+            ]
+            sources = [
+                {"title": h.get("title") or h.get("source", "reference"), "score": h.get("score")}
+                for h in hits
+            ]
+
+        data = {"query": query, "context": context}
+        try:
+            result = await self.assistant.process(data)
         except Exception:
             return {
                 "response": "Sorry, the assistant is temporarily unavailable. Please try again.",
                 "sources": [],
                 "confidence": 0.0,
             }
+        # Surface retrieval sources to the client even if the agent didn't set them.
+        if sources and not result.get("sources"):
+            result["sources"] = sources
+        return result
 
     async def explain_report(self, report: Dict[str, Any]) -> str:
         """Provide a patient-friendly explanation of a medical report."""

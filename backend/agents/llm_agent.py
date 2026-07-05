@@ -96,14 +96,9 @@ class LLMPatientAssistantAgent(BaseAgent):
             {"role": "user", "content": query},
         ]
 
-        if context:
-            messages.insert(
-                1,
-                {
-                    "role": "system",
-                    "content": f"Relevant context: {context}",
-                },
-            )
+        grounding = self._format_context(context)
+        if grounding:
+            messages.insert(1, {"role": "system", "content": grounding})
 
         response_text = self._fallback(query)
         model_used = "fallback"
@@ -121,6 +116,32 @@ class LLMPatientAssistantAgent(BaseAgent):
             "confidence": 0.0,
             "model": model_used,
         }
+
+    @staticmethod
+    def _format_context(context: Dict[str, Any]) -> str:
+        """Build a clean grounding message from retrieved knowledge + context.
+
+        Keeps the raw dict out of the prompt: retrieved snippets are rendered as
+        a short reference block the model is told to rely on but not quote blindly.
+        """
+        if not context:
+            return ""
+        parts: List[str] = []
+        knowledge = context.get("retrieved_knowledge")
+        if knowledge:
+            snippets = "\n".join(
+                f"- {k.get('title', 'reference')}: {k.get('text', '')}" for k in knowledge
+            )
+            parts.append(
+                "Use the following reference material to ground your answer where relevant. "
+                "If it does not apply, rely on general medical knowledge and say so.\n"
+                f"{snippets}"
+            )
+        # Any other lightweight context (user role, patient facts).
+        extras = {k: v for k, v in context.items() if k != "retrieved_knowledge"}
+        if extras:
+            parts.append(f"Additional context: {extras}")
+        return "\n\n".join(parts)
 
     def _fallback(self, query: str) -> str:
         lower = query.lower()

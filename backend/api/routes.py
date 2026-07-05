@@ -34,6 +34,64 @@ pharmacy_service = PharmacyService()
 patient_assistant_service = PatientAssistantService()
 
 
+async def _index_record(record: MedicalRecordModel) -> None:
+    """Best-effort: embed a record's findings/diagnosis for retrieval in chat.
+
+    No-op when the vector store isn't configured. Never raises to the caller.
+    """
+    text_parts = [p for p in (record.findings, record.diagnosis, record.doctor_notes) if p]
+    if not text_parts:
+        return
+    try:
+        from services.vector_store import get_vector_store
+
+        store = get_vector_store()
+        if not store.available():
+            return
+        await store.upsert(
+            [
+                {
+                    "text": " ".join(text_parts),
+                    "payload": {
+                        "source": "record",
+                        "title": f"{record.record_type} record #{record.id}",
+                        "patient_id": record.patient_id,
+                        "status": record.status,
+                    },
+                }
+            ]
+        )
+    except Exception:
+        pass
+
+
+@router.get("/status")
+async def system_status():
+    """Report which subsystems are actually live (DB, AI models, vector DB).
+
+    Makes silent fallbacks visible: if the AI or database isn't configured on
+    the deployment, this endpoint says so instead of the app pretending to work.
+    """
+    from core.config import settings
+    from core.database import check_db
+    from services.vector_store import get_vector_store
+
+    db = await check_db()
+    ai_configured = bool(settings.HF_TOKEN)
+    return {
+        "service": "homzdoctor-api",
+        "version": "0.1.0",
+        "database": db,
+        "ai": {
+            "configured": ai_configured,
+            "llm": {"available": lvlm_service is not None and ai_configured, "model": settings.HF_MODEL},
+            "vlm": {"available": lvlm_service.available, "model": settings.HF_VLM_MODEL},
+            "note": None if ai_configured else "HF_TOKEN not set — AI agents return fallback responses.",
+        },
+        "vector_db": get_vector_store().status(),
+    }
+
+
 @router.post("/auth/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user (patient or doctor)."""
@@ -287,6 +345,7 @@ async def create_medical_record(
     db.add(record)
     await db.commit()
     await db.refresh(record)
+    await _index_record(record)  # embed findings for retrieval-augmented chat
     return record
 
 
@@ -482,6 +541,7 @@ async def doctor_review(
     )
     await db.commit()
     await db.refresh(record)
+    await _index_record(record)  # re-embed with the clinician's approved findings
 
     patient = (
         await db.execute(select(UserModel).where(UserModel.id == record.patient_id))
