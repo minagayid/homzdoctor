@@ -37,14 +37,24 @@ class OrchestratorAgent(BaseAgent):
         self.agents[agent.name] = agent
     
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Route tasks to appropriate agents."""
+        """Route a task to the appropriate agent.
+
+        Routing is resilient: a downstream agent raising is caught and
+        returned as a structured error (with the failing agent named) instead
+        of propagating, so a single agent fault never takes down the request.
+        """
         task_type = data.get("task_type")
-        
-        if task_type in self.agents:
-            self.log_action("routing", {"task": task_type, "data": data})
+
+        if task_type not in self.agents:
+            self.log_action("routing_failed", {"task": task_type, "known": list(self.agents)})
+            return {"error": f"No agent found for task: {task_type}"}
+
+        self.log_action("routing", {"task": task_type})
+        try:
             return await self.agents[task_type].process(data)
-        
-        return {"error": f"No agent found for task: {task_type}"}
+        except Exception as exc:
+            self.log_action("agent_error", {"task": task_type, "error": str(exc)})
+            return {"error": f"Agent '{task_type}' failed: {type(exc).__name__}: {exc}", "task_type": task_type}
 
 
 class ImagingAgent(BaseAgent):
@@ -281,21 +291,47 @@ class EscalationAgent(BaseAgent):
         super().__init__("Escalation")
     
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Check for escalation triggers."""
+        """Check for escalation triggers.
+
+        Red-flag matching is substring-based: a flag trips when its phrase
+        appears within the reported symptom, so "sudden difficulty breathing"
+        or "severe chest pain" still match ("difficulty breathing", "chest
+        pain"). Exact-equality matching (the previous behaviour) silently
+        missed these clinically identical phrasings, an unacceptable failure
+        mode in a safety-critical escalation path. Matching is one-directional
+        so a milder symptom ("headache") does not trip a more specific flag
+        ("severe headache").
+        """
         symptoms = data.get("symptoms", [])
         missed_medication = data.get("missed_medication", False)
         worsening_symptoms = data.get("worsening_symptoms", False)
-        
-        # Check for red flags
-        red_flags = [s for s in symptoms if s.lower() in self.RED_FLAG_SYMPTOMS]
-        
+
+        reasoning: List[str] = []
+        red_flags = []
+        for symptom in symptoms:
+            s = str(symptom).lower()
+            matched = next((flag for flag in self.RED_FLAG_SYMPTOMS if flag in s), None)
+            if matched:
+                red_flags.append(symptom)
+                reasoning.append(f"Symptom {symptom!r} matches red flag {matched!r}")
+
+        if missed_medication:
+            reasoning.append("Missed medication reported")
+        if worsening_symptoms:
+            reasoning.append("Worsening symptoms reported")
+
         if red_flags or missed_medication or worsening_symptoms:
-            self.log_action("escalating", {"red_flags": red_flags, "missed": missed_medication})
+            # Red flags are the most urgent; medication/symptom drift is lower.
+            severity = "critical" if red_flags else "elevated"
+            self.log_action("escalating", {"red_flags": red_flags, "missed": missed_medication, "severity": severity})
             return {
                 "escalated": True,
+                "severity": severity,
                 "reason": "Red flag symptoms detected" if red_flags else "Medication/symptom escalation",
+                "red_flags": red_flags,
+                "reasoning": reasoning,
                 "alert_doctor": True,
                 "recommend_attention": True,
             }
-        
-        return {"escalated": False}
+
+        return {"escalated": False, "severity": "none", "reasoning": ["No red flags or escalation triggers detected"]}

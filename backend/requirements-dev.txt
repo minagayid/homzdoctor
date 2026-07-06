@@ -1,0 +1,15 @@
+# Minimal dependencies to run the backend test suite.
+# The full requirements.txt additionally pins the ML/vision/vector stack
+# (huggingface_hub, pymupdf, qdrant-client, ...) which the app imports lazily
+# and which the tests do not exercise.
+fastapi==0.115.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+sqlalchemy==2.0.36
+aiosqlite==0.20.0
+httpx==0.27.0
+python-jose==3.3.0
+python-multipart==0.0.9
+python-dotenv==1.0.1
+pytest>=8.0
+pytest-asyncio>=0.23

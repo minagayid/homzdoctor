@@ -4,7 +4,7 @@ Unit tests for HomzDoctor multi-agent system.
 
 import pytest
 import asyncio
-from backend.agents.core import (
+from agents.core import (
     OrchestratorAgent,
     ImagingAgent,
     DiagnosticAgent,
@@ -280,6 +280,52 @@ class TestEscalationAgent:
         })
         
         assert result["escalated"] is True
+
+    @pytest.mark.asyncio
+    async def test_red_flag_matches_within_longer_phrase(self):
+        # A more descriptive phrasing must still trip the red flag.
+        agent = EscalationAgent()
+        result = await agent.process({
+            "symptoms": ["sudden severe chest pain radiating to arm"],
+        })
+        assert result["escalated"] is True
+        assert result["severity"] == "critical"
+        assert result["reasoning"]
+
+    @pytest.mark.asyncio
+    async def test_milder_symptom_does_not_match_specific_flag(self):
+        # "headache" must NOT match the more specific "severe headache" flag.
+        agent = EscalationAgent()
+        result = await agent.process({"symptoms": ["headache"]})
+        assert result["escalated"] is False
+
+    @pytest.mark.asyncio
+    async def test_missed_medication_is_elevated_not_critical(self):
+        agent = EscalationAgent()
+        result = await agent.process({"symptoms": [], "missed_medication": True})
+        assert result["escalated"] is True
+        assert result["severity"] == "elevated"
+
+
+class TestOrchestratorResilience:
+    """Orchestrator must not crash when a downstream agent fails."""
+
+    @pytest.mark.asyncio
+    async def test_failing_agent_returns_structured_error(self):
+        class BoomAgent(EscalationAgent):
+            def __init__(self):
+                super().__init__()
+                self.name = "Boom"
+
+            async def process(self, data):
+                raise RuntimeError("model unavailable")
+
+        orchestrator = OrchestratorAgent()
+        orchestrator.register_agent(BoomAgent())
+        result = await orchestrator.process({"task_type": "Boom"})
+        assert "error" in result
+        assert result["task_type"] == "Boom"
+        assert "model unavailable" in result["error"]
 
 
 if __name__ == "__main__":
