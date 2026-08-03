@@ -1,101 +1,135 @@
-"""
-Configuration management for HomzDoctor backend.
-"""
+"""Environment-backed settings for a local-first HomzDoctor instance."""
 
+from __future__ import annotations
+
+import json
 import os
 from pathlib import Path
-from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 from dotenv import load_dotenv
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Absolute path to the backend directory (this file lives in backend/core/).
-# Used to anchor both the .env file and the SQLite database so they resolve to
-# the SAME files no matter which working directory the server is launched from.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Load THIS project's .env by absolute path with override=True, so its values
-# win over any global/system env vars left over from another project (e.g. a
-# system-wide DATABASE_URL pointing at a different database). Passing the
-# explicit path is essential: load_dotenv() with no path only searches upward
-# from the current working directory, so launching from outside backend/ would
-# miss this file and silently fall back to the leftover system DATABASE_URL.
 load_dotenv(BASE_DIR / ".env", override=True)
 
-
-from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
-
-# Query-string params that libpq/psycopg understand but asyncpg does NOT accept
-# as connect kwargs. Railway's *public* Postgres proxy URL often appends
-# ``?sslmode=require`` (and sometimes ``channel_binding``); passing those to the
-# asyncpg driver raises "connect() got an unexpected keyword argument 'sslmode'".
-# We strip them here and re-enable TLS via ``connect_args`` in core/database.py.
-_ASYNCPG_INCOMPATIBLE_PARAMS = {"sslmode", "channel_binding", "gssencmode", "target_session_attrs"}
+_ASYNCPG_INCOMPATIBLE_PARAMS = {
+    "sslmode",
+    "channel_binding",
+    "gssencmode",
+    "target_session_attrs",
+}
 
 
 def normalize_database_url(url: str) -> str:
-    """Return a URL the async SQLAlchemy engine can actually open.
-
-    Handles the two real-world footguns that made HomzDoctor "lose" accounts:
-
-    1. **Railway / Heroku Postgres schemes.** They inject ``DATABASE_URL`` as
-       ``postgres://…`` or ``postgresql://…`` (the *sync* libpq form). The async
-       engine needs the ``+asyncpg`` driver, so we rewrite the scheme and drop
-       libpq-only query params (e.g. ``sslmode``) that asyncpg rejects.
-
-    2. **Relative SQLite paths.** ``sqlite+aiosqlite:///./homzdoctor.db`` resolves
-       against the *current working directory*, so launching from a different
-       folder silently opens a DIFFERENT, empty file and registered accounts
-       seem to vanish. We anchor the path to BASE_DIR.
-    """
+    """Normalize common Postgres URLs and anchor relative SQLite paths."""
     if not url:
         return url
 
-    # --- PostgreSQL: normalise scheme + strip asyncpg-incompatible params ---
-    if url.startswith("postgres://") or url.startswith("postgresql://") or url.startswith("postgresql+psycopg2://"):
+    if url.startswith(("postgres://", "postgresql://", "postgresql+psycopg2://")):
         parts = urlsplit(url)
-        # Force the async driver regardless of the incoming scheme variant.
-        scheme = "postgresql+asyncpg"
-        query = [(k, v) for k, v in parse_qsl(parts.query) if k not in _ASYNCPG_INCOMPATIBLE_PARAMS]
-        return urlunsplit((scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+        query = [
+            (key, value)
+            for key, value in parse_qsl(parts.query)
+            if key not in _ASYNCPG_INCOMPATIBLE_PARAMS
+        ]
+        return urlunsplit(
+            (
+                "postgresql+asyncpg",
+                parts.netloc,
+                parts.path,
+                urlencode(query),
+                parts.fragment,
+            )
+        )
 
-    # --- SQLite: anchor relative paths to BASE_DIR ---
     prefix = "sqlite+aiosqlite:///"
     if url.startswith(prefix):
-        path_part = url[len(prefix):]
-        if path_part.startswith("/"):
-            return url  # already an absolute path (sqlite+aiosqlite:////abs/path)
-        rel = path_part[2:] if path_part.startswith("./") else path_part
-        abs_path = (BASE_DIR / rel).resolve()
-        return f"{prefix}{abs_path.as_posix()}"
-
+        path_part = url[len(prefix) :]
+        # A relative path is always resolved against this checkout, so running
+        # from another working directory cannot silently create a new database.
+        if not path_part.startswith("/") and not (
+            len(path_part) >= 3 and path_part[1:3] == ":/"
+        ):
+            path_part = (BASE_DIR / path_part.removeprefix("./")).resolve().as_posix()
+        return f"{prefix}{path_part}"
     return url
 
 
 class Settings(BaseSettings):
-    """Application settings."""
-    
-    # Application
+    model_config = SettingsConfigDict(
+        env_file=str(BASE_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     APP_NAME: str = "HomzDoctor"
-    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
-    HOST: str = os.getenv("HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("PORT", "8000"))
-    
-    # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    ENVIRONMENT: str = "local"
+    DEBUG: bool = False
+    HOST: str = "127.0.0.1"
+    PORT: int = 8000
+
+    SECRET_KEY: str = "homzdoctor-local-development-key-change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
-    # Database — defaults to a local SQLite file for prototyping.
-    # Set DATABASE_URL in .env to a postgresql+asyncpg URL for production.
-    # Relative SQLite paths are anchored to the backend dir by the validator
-    # below, so the same file is used no matter where the server is launched.
+
     DATABASE_URL: str = "sqlite+aiosqlite:///./homzdoctor.db"
+    REDIS_URL: str = ""
+    SEED_DEMO_DATA: bool = True
+
+    # Comma-separated text keeps .env files human-friendly on every platform.
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+
+    HF_TOKEN: str = ""
+    HF_MODEL: str = "Qwen/Qwen3-4B-Instruct"
+    HF_VLM_MODEL: str = "Qwen/Qwen2.5-VL-7B-Instruct"
+    GOOGLE_MAPS_API_KEY: str = ""
+
+    # Optional local OpenAI-compatible backend (Ollama/vLLM/llama.cpp/etc.).
+    LOCAL_LLM_BASE_URL: str = ""
+    LOCAL_LLM_MODEL: str = "gpt-oss-20b"
+    LOCAL_LLM_API_KEY: str = ""
+    LOCAL_LLM_TIMEOUT: float = 30.0
+
+    QDRANT_URL: str = ""
+    QDRANT_API_KEY: str = ""
+    QDRANT_COLLECTION: str = "homzdoctor_knowledge"
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_DIM: int = 384
+
+    UPLOAD_DIR: str = "uploads"
+    MAX_FILE_SIZE: int = 100 * 1024 * 1024
 
     @field_validator("DATABASE_URL")
     @classmethod
     def _normalize_db_url(cls, url: str) -> str:
-        """Normalise the DB URL for the async engine (see normalize_database_url)."""
         return normalize_database_url(url)
+
+    @model_validator(mode="after")
+    def _validate_production_security(self) -> "Settings":
+        if self.is_production:
+            if self.SECRET_KEY == "homzdoctor-local-development-key-change-me" or len(self.SECRET_KEY) < 32:
+                raise ValueError("Production requires a unique SECRET_KEY of at least 32 characters")
+            if self.is_sqlite:
+                raise ValueError("Production requires a persistent PostgreSQL DATABASE_URL")
+        return self
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        raw = self.ALLOWED_ORIGINS.strip()
+        if raw.startswith("["):
+            try:
+                values = json.loads(raw)
+                return [str(value) for value in values if str(value).strip()]
+            except json.JSONDecodeError:
+                return []
+        return [item.strip() for item in raw.split(",") if item.strip()]
+
+    @property
+    def upload_dir(self) -> Path:
+        path = Path(self.UPLOAD_DIR)
+        return path if path.is_absolute() else BASE_DIR / path
 
     @property
     def is_sqlite(self) -> bool:
@@ -103,41 +137,11 @@ class Settings(BaseSettings):
 
     @property
     def is_production(self) -> bool:
-        """Best-effort production detection (Railway sets RAILWAY_ENVIRONMENT)."""
-        env = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("ENVIRONMENT", "")
-        return not self.DEBUG or env.lower() in {"production", "prod"}
-    
-    # Redis
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    
-    # CORS
-    ALLOWED_ORIGINS: list = ["*"]  # Configure in production
-    
-    # AI/ML
-    MEDGEMMA_MODEL_PATH: str = os.getenv("MEDGEMMA_MODEL_PATH", "./ml/models/medgemma")
-    # Hugging Face agents (also read directly via os.getenv in the agent modules).
-    HF_TOKEN: str = os.getenv("HF_TOKEN", "")
-    HF_MODEL: str = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
-    HF_VLM_MODEL: str = os.getenv("HF_VLM_MODEL", "google/gemma-3-27b-it")
-    GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
+        return self.ENVIRONMENT.lower() in {"production", "prod"}
 
-    # --- Vector DB (Qdrant) for retrieval-augmented chat ---
-    # QDRANT_URL: full URL of a Qdrant instance (e.g. https://xxx.qdrant.io:6333
-    # for Qdrant Cloud, or http://qdrant:6333 for the docker-compose service).
-    # Leave blank to disable RAG (the assistant still works, just without
-    # retrieved context).
-    QDRANT_URL: str = os.getenv("QDRANT_URL", "")
-    QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
-    QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "homzdoctor_knowledge")
-    # Embedding model served via the HF Inference API (feature-extraction).
-    # 384-dim MiniLM keeps the index small; change EMBEDDING_DIM to match if you
-    # swap the model.
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-    EMBEDDING_DIM: int = int(os.getenv("EMBEDDING_DIM", "384"))
-
-    class Config:
-        env_file = str(BASE_DIR / ".env")  # absolute, so it loads from any CWD
-        extra = "ignore"  # tolerate extra env vars (HF_*, UPLOAD_DIR, etc.) read elsewhere via os.getenv
+    @property
+    def local_llm_configured(self) -> bool:
+        return bool(self.LOCAL_LLM_BASE_URL.strip())
 
 
 settings = Settings()

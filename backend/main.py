@@ -25,12 +25,13 @@ async def lifespan(app: FastAPI):
     # Startup
     await init_db()
 
-    # MOCK DATA — seed shared demo data (pharmacies + demo doctor). Remove for production.
-    from core.database import AsyncSessionLocal
-    from core.seed import seed_global
+    # Optional local demo data; disabled by setting SEED_DEMO_DATA=false.
+    if settings.SEED_DEMO_DATA:
+        from core.database import AsyncSessionLocal
+        from core.seed import seed_global
 
-    async with AsyncSessionLocal() as db:
-        await seed_global(db)
+        async with AsyncSessionLocal() as db:
+            await seed_global(db)
 
     # Seed the RAG knowledge base into Qdrant (best-effort; no-op if the vector
     # store is not configured — the assistant still works without retrieval).
@@ -62,7 +63,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -79,6 +80,7 @@ async def root():
     """Root endpoint."""
     return {
         "message": "Welcome to HomzDoctor - AI Healthcare Platform",
+        "service": "homzdoctor-api",
         "version": "0.1.0",
         "docs": "/docs",
     }

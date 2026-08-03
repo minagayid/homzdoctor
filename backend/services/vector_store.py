@@ -189,7 +189,11 @@ class VectorStore:
     # --- reads --------------------------------------------------------------
 
     async def search(
-        self, query: str, top_k: int = 4, source: Optional[str] = None
+        self,
+        query: str,
+        top_k: int = 4,
+        source: Optional[str] = None,
+        patient_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Return the top-k payloads most similar to ``query`` (empty if down)."""
         if not self.available() or not query.strip():
@@ -199,7 +203,20 @@ class VectorStore:
             return []
 
         query_filter = None
-        if source:
+        if patient_id is not None:
+            # A patient chat may see curated knowledge and that patient's own
+            # records, but never another patient's record embedding.
+            query_filter = qmodels.Filter(
+                should=[
+                    qmodels.FieldCondition(
+                        key="source", match=qmodels.MatchValue(value=source or "knowledge")
+                    ),
+                    qmodels.FieldCondition(
+                        key="patient_id", match=qmodels.MatchValue(value=patient_id)
+                    ),
+                ]
+            )
+        elif source:
             query_filter = qmodels.Filter(
                 must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=source))]
             )

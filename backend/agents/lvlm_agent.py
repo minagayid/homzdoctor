@@ -299,7 +299,7 @@ class LVLMDiagnosticAgent(BaseAgent):
     def _fallback(
         self, document: LoadedDocument, modality: str, error: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Deterministic placeholder when the model backend is unavailable."""
+        """Deterministic safety fallback when the model backend is unavailable."""
         return {
             "modality": modality,
             "model": "fallback",

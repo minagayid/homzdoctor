@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Pencil, Trash2 } from 'lucide-react';
 import { recordsApi } from '../../api';
@@ -31,6 +32,7 @@ export function RecordsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<MedicalRecordCreate>(EMPTY_FORM);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MedicalRecord | null>(null);
 
   const { data: records, isLoading, isError } = useQuery({
@@ -42,10 +44,15 @@ export function RecordsPage() {
     setFormOpen(false);
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setSelectedFile(null);
   };
 
   const createMutation = useMutation({
-    mutationFn: recordsApi.create,
+    mutationFn: async (payload: MedicalRecordCreate) => {
+      const created = await recordsApi.create(payload);
+      if (selectedFile) await recordsApi.uploadFile(created.id, selectedFile);
+      return created;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.records });
       closeForm();
@@ -72,6 +79,7 @@ export function RecordsPage() {
   const startCreate = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setSelectedFile(null);
     setFormOpen(true);
   };
 
@@ -80,15 +88,12 @@ export function RecordsPage() {
     setForm({
       recordType: r.recordType,
       filePath: r.filePath,
-      findings: r.findings ?? '',
-      diagnosis: r.diagnosis ?? '',
     });
     setFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!form.filePath.trim()) return;
     if (editingId !== null) {
       updateMutation.mutate({ id: editingId, payload: form });
     } else {
@@ -201,28 +206,28 @@ export function RecordsPage() {
             </select>
           </label>
           <Input
-            label="File name"
+            label="File name (optional)"
             placeholder="e.g. chest_xray.dcm"
             value={form.filePath}
             onChange={(e) => setForm({ ...form, filePath: e.target.value })}
-            required
           />
-          <div className="sm:col-span-2">
-            <Input
-              label="Findings (optional)"
-              placeholder="Notes or symptoms"
-              value={form.findings ?? ''}
-              onChange={(e) => setForm({ ...form, findings: e.target.value })}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <Input
-              label="Diagnosis (optional)"
-              placeholder="Diagnosis"
-              value={form.diagnosis ?? ''}
-              onChange={(e) => setForm({ ...form, diagnosis: e.target.value })}
-            />
-          </div>
+          {editingId === null && (
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Medical file</span>
+              <input
+                type="file"
+                accept=".dcm,.dicom,.jpg,.jpeg,.png,.webp,.pdf,.nii,.nii.gz"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                The file is stored privately under a generated name.
+              </span>
+            </label>
+          )}
+          <p className="text-sm text-slate-500 sm:col-span-2">
+            Findings and diagnoses are added by the analysis and clinician-review workflow.
+          </p>
           {saveError && (
             <p className="text-sm text-red-600 sm:col-span-2">
               Could not save the record. Please try again.

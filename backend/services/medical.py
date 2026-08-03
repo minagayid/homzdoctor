@@ -38,14 +38,14 @@ class MedicalService:
     
     async def process_medical_image(self, image_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process and analyze a medical image."""
-        # Step 1: Preprocess image
+        # Step 1: request the configured imaging capability.
         imaging_result = await self.imaging_agent.process({
             "task_type": "Imaging",
             "image_path": image_data.get("path"),
             "image_type": image_data.get("type"),
         })
         
-        # Step 2: Run diagnostic analysis
+        # Step 2: pass structured findings to the diagnostic safety layer.
         diagnostic_result = await self.diagnostic_agent.process({
             "task_type": "Diagnostic",
             "findings": imaging_result.get("findings"),
@@ -58,8 +58,12 @@ class MedicalService:
         }
     
     async def get_patient_history(self, patient_id: int) -> List[Dict[str, Any]]:
-        """Get a patient's medical history."""
-        # Implementation placeholder
+        """Return history records for legacy callers.
+
+        Database-backed history is exposed by the authenticated API route;
+        this compatibility method deliberately returns no data rather than
+        pretending that a lookup succeeded.
+        """
         return []
 
 
@@ -102,7 +106,8 @@ class PharmacyService:
     """Service for pharmacy-related operations (LLM-coordinated)."""
 
     def __init__(self):
-        # Keep the original stub agent for backward-compatible inventory calls.
+        # This agent reports an explicit unavailable state until an inventory
+        # provider is configured.
         self.pharmacy_agent = PharmacyAgent()
         # The new LLM agent handles real distance ranking + ordering.
         self.llm_agent = LLMPharmacyAgent()
@@ -156,24 +161,27 @@ class PharmacyService:
 
 
 class AdherenceService:
-    """Service for medication adherence monitoring."""
-    
-    def __init__(self):
-        pass
+    """Compatibility service for adherence integrations.
+
+    Persisted adherence is implemented by the authenticated API routes. These
+    methods remain for older callers and never claim that an action succeeded.
+    """
     
     async def log_medication_taken(self, schedule_id: int, taken_at: Optional[datetime] = None) -> Dict[str, Any]:
-        """Log that a medication was taken."""
-        # Implementation placeholder
-        return {"status": "logged", "schedule_id": schedule_id}
+        """Explain that callers must use the persisted API route."""
+        return {
+            "status": "not_persisted",
+            "logged": False,
+            "schedule_id": schedule_id,
+            "taken_at": taken_at.isoformat() if taken_at else None,
+        }
     
     async def calculate_adherence_score(self, patient_id: int) -> float:
-        """Calculate a patient's medication adherence score (0-100)."""
-        # Implementation placeholder
+        """Return the neutral score used by legacy callers without records."""
         return 0.0
     
     async def schedule_reminders(self, prescription_id: int, medication_times: List[str]) -> List[Dict[str, Any]]:
-        """Schedule medication reminders."""
-        # Implementation placeholder
+        """Return no reminders until a notification provider is configured."""
         return []
 
 
@@ -188,9 +196,13 @@ class EscalationService:
         return await self.escalation_agent.process(patient_data)
     
     async def alert_doctor(self, doctor_id: int, alert_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Send alert to a doctor."""
-        # Implementation placeholder
-        return {"alert_sent": True, "doctor_id": doctor_id}
+        """Report an unavailable notification channel without false success."""
+        return {
+            "alert_sent": False,
+            "status": "not_configured",
+            "doctor_id": doctor_id,
+            "alert_data": alert_data,
+        }
 
 
 class PatientAssistantService:
@@ -214,7 +226,11 @@ class PatientAssistantService:
 
         # Retrieve grounding snippets (curated KB + this patient's records).
         try:
-            hits = await self.vector_store.search(query, top_k=4)
+            hits = await self.vector_store.search(
+                query,
+                top_k=4,
+                patient_id=context.get("patient_id"),
+            )
         except Exception:
             hits = []
         if hits:

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   ScanLine,
@@ -37,8 +38,8 @@ function Section({
   children,
 }: {
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
+  icon: ComponentType<{ className?: string }>;
+  children: ReactNode;
 }) {
   return (
     <Card>

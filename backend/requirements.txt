@@ -1,16 +1,14 @@
+# Minimal local runtime. The app runs offline with SQLite and deterministic
+# safety fallbacks; model/vector integrations are optional extras.
 fastapi==0.115.6
 pydantic==2.9.2
 pydantic-settings==2.5.2
 uvicorn==0.29.0
 sqlalchemy==2.0.36
-aiosqlite==0.20.0    # prototype DB driver (SQLite)
-asyncpg==0.30.0      # production DB driver (PostgreSQL)
-redis==5.0.3
+aiosqlite==0.20.0
 python-jose==3.3.0
 python-multipart==0.0.9
 httpx==0.27.0
 python-dotenv==1.0.1
-huggingface_hub>=0.34,<1.0   # InferenceClient w/ multimodal chat_completion (LVLM). >=0.34 uses the modern provider router (old 0.23 hit the retired api-inference.huggingface.co host); <1.0 stays compatible with transformers/fastembed if installed in the same env.
-pillow>=10.4             # image normalisation for the vision agent
-pymupdf>=1.25.0          # render lab-report PDFs to images + extract text (py3.13 wheels)
-qdrant-client>=1.12.0    # vector DB client for retrieval-augmented chat (RAG). Optional at runtime: the app degrades gracefully if QDRANT_URL is unset.
+pillow>=10.4
+pymupdf>=1.25.0

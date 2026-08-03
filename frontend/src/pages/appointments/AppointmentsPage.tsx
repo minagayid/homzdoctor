@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Plus, X, Pencil, Trash2, CalendarClock } from 'lucide-react';
 import { appointmentsApi } from '../../api';
@@ -86,7 +87,7 @@ export function AppointmentsPage() {
     setFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.reason.trim() || !form.scheduledTime) return;
     if (editing) {
