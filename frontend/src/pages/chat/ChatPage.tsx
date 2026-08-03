@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Send, Bot, User, Sparkles, ShieldCheck } from 'lucide-react';
 import { chatApi } from '../../api';
@@ -46,7 +47,7 @@ export function ChatPage() {
     mutation.mutate(q);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     send(input);
   };

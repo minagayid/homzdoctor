@@ -186,7 +186,7 @@ export interface EscalationResponse {
   alerts: unknown[];
 }
 
-/** Generic message envelope returned by many placeholder endpoints. */
+/** Generic message envelope returned by simple API operations. */
 export interface MessageResponse {
   message: string;
   [key: string]: unknown;

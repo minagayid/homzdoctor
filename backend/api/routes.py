@@ -6,6 +6,9 @@ Defines all RESTful endpoints for the healthcare platform.
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.security import HTTPBearer
 from typing import List, Optional
+import uuid
+import json
+from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,9 +24,18 @@ from models.medical import (
     Prescription as PrescriptionModel,
     Pharmacy as PharmacyModel,
     Appointment as AppointmentModel,
+    MedicationAdherence as MedicationAdherenceModel,
+    AnalysisRun as AnalysisRunModel,
 )
-from services.medical import LVLMDiagnosticService, PharmacyService, PatientAssistantService
-from core.seed import seed_user_data  # MOCK DATA — remove for production (see core/seed.py)
+from services.medical import (
+    LVLMDiagnosticService,
+    PharmacyService,
+    PatientAssistantService,
+    EscalationService,
+)
+from core.config import BASE_DIR, settings
+from core.file_storage import LocalFileStore, UploadValidationError
+from core.policy import registration_role, validate_record_update, validate_upload_name
 
 router = APIRouter()
 security = HTTPBearer()
@@ -32,6 +44,8 @@ security = HTTPBearer()
 lvlm_service = LVLMDiagnosticService()
 pharmacy_service = PharmacyService()
 patient_assistant_service = PatientAssistantService()
+escalation_service = EscalationService()
+file_store = LocalFileStore(settings.upload_dir, max_bytes=settings.MAX_FILE_SIZE)
 
 
 async def _index_record(record: MedicalRecordModel) -> None:
@@ -77,16 +91,23 @@ async def system_status():
     from services.vector_store import get_vector_store
 
     db = await check_db()
-    ai_configured = bool(settings.HF_TOKEN)
+    ai_configured = bool(settings.HF_TOKEN or settings.local_llm_configured)
     return {
         "service": "homzdoctor-api",
         "version": "0.1.0",
         "database": db,
         "ai": {
             "configured": ai_configured,
-            "llm": {"available": lvlm_service is not None and ai_configured, "model": settings.HF_MODEL},
+            "llm": {
+                "available": bool(settings.LOCAL_LLM_BASE_URL or settings.HF_TOKEN),
+                "model": settings.LOCAL_LLM_MODEL if settings.local_llm_configured else settings.HF_MODEL,
+            },
             "vlm": {"available": lvlm_service.available, "model": settings.HF_VLM_MODEL},
             "note": None if ai_configured else "HF_TOKEN not set — AI agents return fallback responses.",
+            "local_llm": {
+                "configured": settings.local_llm_configured,
+                "model": settings.LOCAL_LLM_MODEL,
+            },
         },
         "vector_db": get_vector_store().status(),
     }
@@ -95,6 +116,10 @@ async def system_status():
 @router.post("/auth/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user (patient or doctor)."""
+    try:
+        role = registration_role(payload.role.value)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     existing = (
         await db.execute(select(UserModel).where(UserModel.email == payload.email))
     ).scalar_one_or_none()
@@ -108,15 +133,12 @@ async def register_user(payload: UserCreate, db: AsyncSession = Depends(get_db))
         email=payload.email,
         hashed_password=hash_password(payload.password),
         full_name=payload.full_name,
-        role=payload.role.value,
+        role=role,
         is_active=True,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
-
-    # MOCK DATA — seed demo records/prescription/adherence (remove for production).
-    await seed_user_data(db, user.id)
 
     return user
 
@@ -334,12 +356,19 @@ async def create_medical_record(
     current_user: UserModel = Depends(get_current_user),
 ):
     """Create a new medical record for the authenticated patient."""
+    if payload.file_path:
+        try:
+            validate_upload_name(payload.file_path)
+        except UploadValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     record = MedicalRecordModel(
         patient_id=current_user.id,
         record_type=payload.record_type,
         file_path=payload.file_path,
-        findings=payload.findings,
-        diagnosis=payload.diagnosis,
+        # Clinical conclusions are created by analysis and clinician review,
+        # never by patient intake fields.
+        findings=None,
+        diagnosis=None,
         status="pending",
     )
     db.add(record)
@@ -402,8 +431,14 @@ async def update_medical_record(
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
 
-    # Apply only the fields the client actually sent (partial update).
-    updates = payload.model_dump(exclude_unset=True)
+    # Patients can edit intake metadata, never clinical conclusions.
+    try:
+        updates = validate_record_update(
+            payload.model_dump(exclude_unset=True),
+            doctor_reviewed=bool(record.doctor_reviewed),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     for field, value in updates.items():
         setattr(record, field, value)
 
@@ -435,9 +470,56 @@ async def delete_medical_record(
 
 
 @router.post("/medical/records/{record_id}/upload")
-async def upload_medical_file(record_id: int, file: UploadFile = File(...)):
-    """Upload medical file (image, DICOM, PDF) for a record."""
-    return {"message": "File uploaded", "filename": file.filename}
+async def upload_medical_file(
+    record_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Persist a medical upload privately and attach it to its owner's record."""
+    record = (
+        await db.execute(
+            select(MedicalRecordModel).where(
+                MedicalRecordModel.id == record_id,
+                MedicalRecordModel.patient_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+    raw = await file.read(settings.MAX_FILE_SIZE + 1)
+    if len(raw) > settings.MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Medical file exceeds the configured size limit",
+        )
+    try:
+        saved = file_store.save(file.filename or "upload", raw)
+    except UploadValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    relative_path = saved.path.relative_to(settings.upload_dir.resolve()).as_posix()
+    relative_path = f"{settings.upload_dir.name}/{relative_path}"
+    metadata = dict(record.file_metadata or {})
+    metadata.update(
+        {
+            "original_filename": file.filename or "upload",
+            "content_type": file.content_type or "application/octet-stream",
+            "size": saved.size,
+        }
+    )
+    record.file_path = relative_path
+    record.file_metadata = metadata
+    await db.commit()
+    await db.refresh(record)
+    return {
+        "message": "File uploaded",
+        "recordId": record.id,
+        "filePath": relative_path,
+        "size": saved.size,
+        "contentType": file.content_type or "application/octet-stream",
+    }
 
 
 # Doctor — review workflow (doctor/admin only)
@@ -554,11 +636,26 @@ async def doctor_review(
 async def create_prescription(
     payload: PrescriptionCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user),
+    doctor: UserModel = Depends(require_doctor),
 ):
-    """Create a new prescription (the current user acts as the prescribing doctor)."""
+    """Create a draft prescription for a clinician-reviewed patient record."""
+    record = (
+        await db.execute(
+            select(MedicalRecordModel).where(
+                MedicalRecordModel.id == payload.record_id,
+                MedicalRecordModel.patient_id == payload.patient_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient record not found")
+    if not record.doctor_reviewed or record.status == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A prescription requires a clinician-reviewed, non-rejected record",
+        )
     prescription = PrescriptionModel(
-        doctor_id=current_user.id,
+        doctor_id=doctor.id,
         patient_id=payload.patient_id,
         record_id=payload.record_id,
         medications=payload.medications,
@@ -608,7 +705,7 @@ async def get_prescription(
 async def approve_prescription(
     prescription_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user),
+    doctor: UserModel = Depends(require_doctor),
 ):
     """Mark a prescription as approved."""
     prescription = (
@@ -618,6 +715,8 @@ async def approve_prescription(
     ).scalar_one_or_none()
     if prescription is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prescription not found")
+    if doctor.role != "admin" and prescription.doctor_id != doctor.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the prescribing doctor can approve")
     prescription.approved = True
     await db.commit()
     await db.refresh(prescription)
@@ -704,21 +803,80 @@ async def place_order(
 
 # Medication Adherence
 @router.post("/adherence/log")
-async def log_medication(adherence: MedicationAdherence):
-    """Log medication adherence (taken/skipped/missed)."""
-    return {"message": "Adherence logged", "adherence_id": adherence.id}
+async def log_medication(
+    adherence: MedicationAdherenceLog,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Log an adherence event for one of the patient's prescriptions."""
+    prescription = (
+        await db.execute(
+            select(PrescriptionModel).where(
+                PrescriptionModel.id == adherence.prescription_id,
+                PrescriptionModel.patient_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if prescription is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prescription not found")
+    if adherence.status not in {"pending", "taken", "skipped", "missed"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid adherence status")
+    entry = MedicationAdherenceModel(
+        prescription_id=adherence.prescription_id,
+        medication_name=adherence.medication_name,
+        scheduled_time=adherence.scheduled_time,
+        status=adherence.status,
+        taken_at=adherence.taken_at,
+    )
+    db.add(entry)
+    await db.commit()
+    await db.refresh(entry)
+    return {"message": "Adherence logged", "adherenceId": entry.id}
 
 
 @router.get("/adherence/patient/{patient_id}")
-async def get_patient_adherence(patient_id: int):
-    """Get patient's medication adherence history."""
-    return {"patient_id": patient_id, "adherence_history": []}
+async def get_patient_adherence(
+    patient_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Get the authenticated patient's medication adherence history."""
+    if patient_id != current_user.id and current_user.role not in {"doctor", "admin"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Patient access required")
+    result = await db.execute(
+        select(MedicationAdherenceModel)
+        .join(PrescriptionModel, MedicationAdherenceModel.prescription_id == PrescriptionModel.id)
+        .where(PrescriptionModel.patient_id == patient_id)
+        .order_by(MedicationAdherenceModel.scheduled_time.desc())
+    )
+    entries = result.scalars().all()
+    return {
+        "patientId": patient_id,
+        "adherenceHistory": [
+            MedicationAdherence.model_validate(entry).model_dump(by_alias=True)
+            for entry in entries
+        ],
+    }
 
 
 @router.get("/adherence/patient/{patient_id}/score")
-async def get_adherence_score(patient_id: int):
-    """Get patient's adherence score."""
-    return {"patient_id": patient_id, "score": 0.0}
+async def get_adherence_score(
+    patient_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Calculate the authenticated patient's taken-event percentage."""
+    if patient_id != current_user.id and current_user.role not in {"doctor", "admin"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Patient access required")
+    result = await db.execute(
+        select(MedicationAdherenceModel)
+        .join(PrescriptionModel, MedicationAdherenceModel.prescription_id == PrescriptionModel.id)
+        .where(PrescriptionModel.patient_id == patient_id)
+    )
+    entries = result.scalars().all()
+    taken = sum(entry.status == "taken" for entry in entries)
+    score = round((taken / len(entries)) * 100, 1) if entries else 0.0
+    return {"patientId": patient_id, "score": score, "events": len(entries)}
 
 
 # Appointments
@@ -840,6 +998,7 @@ async def delete_appointment(
 async def diagnose_medical_file(
     file: UploadFile = File(...),
     modality: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db),
     current_user: UserModel = Depends(get_current_user),
 ):
     """Run the LVLM diagnostic pipeline on an uploaded image or lab PDF.
@@ -848,23 +1007,126 @@ async def diagnose_medical_file(
     Runs diagnose -> recheck -> finalise and returns a result that ALWAYS
     requires doctor review before it can drive any treatment.
     """
-    raw = await file.read()
+    raw = await file.read(settings.MAX_FILE_SIZE + 1)
+    if len(raw) > settings.MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Medical file exceeds the configured size limit",
+        )
+    try:
+        saved = file_store.save(file.filename or "upload", raw)
+    except UploadValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    relative_path = saved.path.relative_to(settings.upload_dir.resolve()).as_posix()
+    relative_path = f"{settings.upload_dir.name}/{relative_path}"
+    record = MedicalRecordModel(
+        patient_id=current_user.id,
+        record_type=(modality or "unknown").lower(),
+        file_path=relative_path,
+        file_metadata={
+            "original_filename": file.filename or "upload",
+            "content_type": file.content_type or "application/octet-stream",
+            "size": saved.size,
+        },
+        status="pending",
+    )
+    db.add(record)
+    await db.flush()
     result = await lvlm_service.analyze_file(
         file_bytes=raw, filename=file.filename or "upload", modality=modality
+    )
+    record.findings = json.dumps(result.get("final_diagnosis") or {}, sort_keys=True)
+    record.confidence_score = float(result.get("confidence", 0.0) or 0.0)
+    analysis_id = str(uuid.uuid4())
+    db.add(
+        AnalysisRunModel(
+            id=analysis_id,
+            patient_id=current_user.id,
+            record_id=record.id,
+            filename=file.filename or "upload",
+            modality=(modality or "unknown").lower(),
+            status="completed" if not result.get("error") else "fallback",
+            result=result,
+        )
+    )
+    await db.commit()
+    result.update(
+        {
+            "analysisId": analysis_id,
+            "recordId": record.id,
+            "doctorReviewRequired": bool(result.get("doctor_review_required", True)),
+        }
     )
     return result
 
 
 @router.post("/ai/analyze")
-async def analyze_medical_data(data: dict):
-    """Run AI analysis on medical data (JSON stub kept for compatibility)."""
-    return {"analysis_id": None, "status": "processing"}
+async def analyze_medical_data(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Analyze a previously uploaded owned record (compatibility endpoint)."""
+    record_id = data.get("record_id") or data.get("recordId")
+    if not record_id:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="record_id is required")
+    record = (
+        await db.execute(
+            select(MedicalRecordModel).where(
+                MedicalRecordModel.id == int(record_id),
+                MedicalRecordModel.patient_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+    stored_path = BASE_DIR / record.file_path
+    if not stored_path.exists():
+        stored_path = settings.upload_dir / Path(record.file_path).name
+    if not stored_path.exists():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Stored upload is unavailable")
+    result = await lvlm_service.analyze_path(str(stored_path), modality=record.record_type)
+    analysis_id = str(uuid.uuid4())
+    db.add(
+        AnalysisRunModel(
+            id=analysis_id,
+            patient_id=current_user.id,
+            record_id=record.id,
+            filename=Path(record.file_path).name,
+            modality=record.record_type,
+            status="completed" if not result.get("error") else "fallback",
+            result=result,
+        )
+    )
+    await db.commit()
+    return {"analysisId": analysis_id, "recordId": record.id, "status": "completed", "result": result}
 
 
 @router.get("/ai/results/{analysis_id}")
-async def get_analysis_results(analysis_id: str):
-    """Get AI analysis results."""
-    return {"analysis_id": analysis_id, "results": {}}
+async def get_analysis_results(
+    analysis_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Get an analysis result only when it belongs to the authenticated patient."""
+    analysis = (
+        await db.execute(
+            select(AnalysisRunModel).where(
+                AnalysisRunModel.id == analysis_id,
+                AnalysisRunModel.patient_id == current_user.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if analysis is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
+    return {
+        "analysisId": analysis.id,
+        "recordId": analysis.record_id,
+        "status": analysis.status,
+        "result": analysis.result,
+        "createdAt": analysis.created_at,
+    }
 
 
 # Chat / Patient Assistant
@@ -879,11 +1141,20 @@ async def chat_query(
         return {"response": "Please type a question.", "sources": [], "confidence": 0.0}
     context = query.get("context") or {}
     context.setdefault("user_role", current_user.role)
+    context["patient_id"] = current_user.id
     return await patient_assistant_service.answer_query(text, context)
 
 
 # Escalation
 @router.post("/escalation/check")
-async def check_escalation(symptoms: dict):
-    """Check for escalation triggers."""
-    return {"escalated": False, "alerts": []}
+async def check_escalation(
+    symptoms: dict,
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Run deterministic red-flag screening for the authenticated patient."""
+    result = await escalation_service.check_escalation_triggers(symptoms)
+    result["patientId"] = current_user.id
+    result["disclaimer"] = (
+        "This screen is not medical advice; seek emergency care for urgent symptoms."
+    )
+    return result

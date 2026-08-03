@@ -170,3 +170,17 @@ class Appointment(Base):
     scheduled_time = Column(DateTime, nullable=False)
     status = Column(String(50), default="scheduled")  # scheduled, cancelled, completed
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AnalysisRun(Base):
+    """Persisted, doctor-review-gated result of an AI analysis request."""
+    __tablename__ = "analysis_runs"
+
+    id = Column(String(36), primary_key=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    record_id = Column(Integer, ForeignKey("medical_records.id"), nullable=False)
+    filename = Column(String(255), nullable=False)
+    modality = Column(String(50), nullable=False)
+    status = Column(String(50), default="completed", nullable=False)
+    result = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)

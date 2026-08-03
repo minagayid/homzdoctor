@@ -15,6 +15,8 @@ from typing import Any, Dict, List, Optional
 import logging
 
 from agents.core import BaseAgent
+from core.config import settings
+from services.local_llm import LocalLLMClient, LocalLLMUnavailable
 
 LOG = logging.getLogger(__name__)
 
@@ -81,8 +83,14 @@ _client = _Client(model=DEFAULT_MODEL, token=DEFAULT_TOKEN, timeout=HF_TIMEOUT)
 
 
 class LLMPatientAssistantAgent(BaseAgent):
-    def __init__(self) -> None:
+    def __init__(self, local_client: Optional[LocalLLMClient] = None) -> None:
         super().__init__("PatientAssistant")
+        self._local = local_client or LocalLLMClient(
+            endpoint=settings.LOCAL_LLM_BASE_URL,
+            model=settings.LOCAL_LLM_MODEL,
+            api_key=settings.LOCAL_LLM_API_KEY,
+            timeout=settings.LOCAL_LLM_TIMEOUT,
+        )
         LOG.info("PatientAssistant initialized with model=%s available=%s", DEFAULT_MODEL, _client.available())
 
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -102,7 +110,13 @@ class LLMPatientAssistantAgent(BaseAgent):
 
         response_text = self._fallback(query)
         model_used = "fallback"
-        if _client.available():
+        if self._local.enabled:
+            try:
+                response_text = self._local.complete(messages, max_tokens=350)
+                model_used = self._local.model
+            except LocalLLMUnavailable as exc:
+                LOG.warning("Local LLM request failed, continuing with configured fallback: %s", exc)
+        if model_used == "fallback" and _client.available():
             try:
                 response_text = _client.chat(messages, max_tokens=350)
                 model_used = DEFAULT_MODEL
@@ -163,6 +177,11 @@ class LLMPatientAssistantAgent(BaseAgent):
             {"role": "user", "content": prompt},
         ]
         fallback = "I can give a simplified overview, but only your clinician can explain your exact results."
+        if self._local.enabled:
+            try:
+                return self._local.complete(messages, max_tokens=300)
+            except LocalLLMUnavailable:
+                pass
         if _client.available():
             try:
                 return _client.chat(messages, max_tokens=300)

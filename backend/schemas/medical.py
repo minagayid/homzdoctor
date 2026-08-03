@@ -138,7 +138,7 @@ class MedicalRecordCreate(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     record_type: str  # e.g., "xray", "mri", "ct", "lab_report"
-    file_path: str
+    file_path: str = ""
     findings: Optional[str] = None
     diagnosis: Optional[str] = None
 
@@ -249,6 +249,17 @@ class MedicationAdherence(BaseModel):
     medication_name: str
     scheduled_time: datetime
     status: str  # taken, skipped, missed
+    taken_at: Optional[datetime] = None
+
+
+class MedicationAdherenceLog(BaseModel):
+    """Patient-owned adherence event input."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    prescription_id: int
+    medication_name: str
+    scheduled_time: datetime
+    status: str
     taken_at: Optional[datetime] = None
 
 

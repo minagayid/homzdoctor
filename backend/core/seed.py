@@ -27,7 +27,7 @@ from core.security import hash_password
 
 DEMO_DOCTOR_EMAIL = "dr.demo@homzdoctor.app"
 
-# --- Reference / global mock data (shared by all users) ---------------------
+# --- Reference / global demo data (shared by local users) -------------------
 
 SAMPLE_PHARMACIES = [
     {
@@ -80,7 +80,7 @@ async def seed_global(db: AsyncSession) -> None:
     await db.commit()
 
 
-# --- Per-user mock data (seeded on registration) ----------------------------
+# --- Per-user demo data (kept for compatibility with older fixtures) --------
 
 
 def _sample_records(user_id: int) -> list[MedicalRecord]:

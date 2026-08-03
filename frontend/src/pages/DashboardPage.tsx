@@ -96,8 +96,6 @@ export function DashboardPage() {
   const firstName = user?.fullName?.trim().split(' ')[0];
 
   // Doctors get their own dashboard — send them there.
-  if (isDoctor) return <Navigate to={PATHS.doctor} replace />;
-
   const records = useQuery({ queryKey: QUERY_KEYS.records, queryFn: recordsApi.list });
   const prescriptions = useQuery({
     queryKey: QUERY_KEYS.prescriptions,
@@ -107,6 +105,8 @@ export function DashboardPage() {
     queryKey: QUERY_KEYS.appointments,
     queryFn: appointmentsApi.list,
   });
+
+  if (isDoctor) return <Navigate to={PATHS.doctor} replace />;
 
   const isLoading = records.isLoading || prescriptions.isLoading || appointments.isLoading;
 
