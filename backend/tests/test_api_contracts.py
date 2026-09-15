@@ -15,6 +15,7 @@ _db_path = Path(tempfile.gettempdir()) / "homzdoctor-contract-tests.db"
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_db_path.as_posix()}"
 os.environ["DEBUG"] = "false"
 os.environ["ENVIRONMENT"] = "test"
+os.environ["SEED_DEMO_DATA"] = "true"
 # Remove any database from a prior interrupted run before the application creates its engine.
 _db_path.unlink(missing_ok=True)
 

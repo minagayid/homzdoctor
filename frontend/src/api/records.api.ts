@@ -8,7 +8,7 @@ export interface MedicalRecordCreate {
   diagnosis?: string;
 }
 
-export type MedicalRecordUpdate = Partial<MedicalRecordCreate>;
+export type MedicalRecordUpdate = { recordType?: string };
 
 export const recordsApi = {
   list: () => apiClient.get<MedicalRecord[]>('/medical/records').then((r) => r.data),

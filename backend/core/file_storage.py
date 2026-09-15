@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from uuid import uuid4
 
 from core.policy_types import SUPPORTED_UPLOAD_EXTENSIONS
@@ -48,3 +49,25 @@ class LocalFileStore:
         target = self.root / f"{uuid4().hex}{extension}"
         target.write_bytes(content)
         return SavedUpload(path=target, extension=extension, size=len(content))
+
+    def delete_generated(self, filename: str) -> bool:
+        """Delete a file only when its name matches this store's generated-ID format."""
+        if not isinstance(filename, str) or "/" in filename or "\\" in filename:
+            return False
+        extension = next(
+            (ext for ext in sorted(SUPPORTED_UPLOAD_EXTENSIONS, key=len, reverse=True) if filename.endswith(ext)),
+            None,
+        )
+        if extension is None:
+            return False
+        file_id = filename[: -len(extension)]
+        if not re.fullmatch(r"[0-9a-f]{32}", file_id):
+            return False
+        target = (self.root / filename).resolve()
+        if target.parent != self.root:
+            return False
+        try:
+            target.unlink()
+        except FileNotFoundError:
+            return False
+        return True

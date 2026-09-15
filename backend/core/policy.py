@@ -17,7 +17,7 @@ _SUPPORTED_UPLOAD_EXTENSIONS = {
     ".nii",
     ".nii.gz",
 }
-_PATIENT_EDITABLE_FIELDS = {"record_type", "file_path"}
+_PATIENT_EDITABLE_FIELDS = {"record_type"}
 _CLINICAL_FIELDS = {
     "findings",
     "diagnosis",

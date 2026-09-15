@@ -14,6 +14,7 @@ import uvicorn
 from api.routes import router
 from core.config import settings
 from core.database import init_db
+from core.request_limits import RequestBodyLimitMiddleware
 
 logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger("homzdoctor")
@@ -58,6 +59,15 @@ app = FastAPI(
     description="AI Healthcare Platform - Intelligent Healthcare Copilot",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# Enforce this before Starlette parses multipart bodies and spools uploads.
+# The small allowance covers multipart boundaries and form fields around one
+# file at the configured application upload limit.
+app.add_middleware(
+    RequestBodyLimitMiddleware,
+    max_body_bytes=settings.MAX_FILE_SIZE + 1_048_576,
+    path_limits={"/api/v1/users/me/avatar": settings.MAX_AVATAR_FILE_SIZE + 1_048_576},
 )
 
 # CORS middleware

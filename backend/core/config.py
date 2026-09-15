@@ -12,7 +12,7 @@ from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env", override=True)
+load_dotenv(BASE_DIR / ".env", override=False)
 
 _ASYNCPG_INCOMPATIBLE_PARAMS = {
     "sslmode",
@@ -76,7 +76,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./homzdoctor.db"
     REDIS_URL: str = ""
-    SEED_DEMO_DATA: bool = True
+    SEED_DEMO_DATA: bool = False
 
     # Comma-separated text keeps .env files human-friendly on every platform.
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
@@ -100,6 +100,7 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "uploads"
     MAX_FILE_SIZE: int = 100 * 1024 * 1024
+    MAX_AVATAR_FILE_SIZE: int = 8 * 1024 * 1024
 
     @field_validator("DATABASE_URL")
     @classmethod
@@ -109,6 +110,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _validate_production_security(self) -> "Settings":
         if self.is_production:
+            if self.SEED_DEMO_DATA:
+                raise ValueError("Production must not seed demo accounts or records")
             if self.SECRET_KEY == "homzdoctor-local-development-key-change-me" or len(self.SECRET_KEY) < 32:
                 raise ValueError("Production requires a unique SECRET_KEY of at least 32 characters")
             if self.is_sqlite:

@@ -89,5 +89,5 @@ ml/
 d韵诗docker build -t homzdoctor-ml:latest .
 
 # Run inference server
-docker run -p 8080:8080 homzdoctor-ml:latest
+docker run -p 127.0.0.1:8080:8080 homzdoctor-ml:latest
 ```
