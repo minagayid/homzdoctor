@@ -8,6 +8,7 @@ from fastapi.security import HTTPBearer
 from typing import List, Optional
 import uuid
 import json
+import logging
 from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,9 +36,10 @@ from services.medical import (
 )
 from core.config import BASE_DIR, settings
 from core.file_storage import LocalFileStore, UploadValidationError
-from core.policy import registration_role, validate_record_update, validate_upload_name
+from core.policy import registration_role, validate_record_update
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 # Agent-backed services (singletons; load their model clients lazily).
@@ -46,6 +48,23 @@ pharmacy_service = PharmacyService()
 patient_assistant_service = PatientAssistantService()
 escalation_service = EscalationService()
 file_store = LocalFileStore(settings.upload_dir, max_bytes=settings.MAX_FILE_SIZE)
+
+
+def _delete_generated_filename(filename: str) -> None:
+    try:
+        file_store.delete_generated(filename)
+    except OSError:
+        logger.exception("Unable to remove generated medical upload during cleanup")
+
+
+def _cleanup_generated_upload(file_path: Optional[str]) -> None:
+    """Remove only app-generated uploads referenced through the configured store."""
+    prefix = f"{settings.upload_dir.name}/"
+    if not isinstance(file_path, str) or not file_path.startswith(prefix):
+        return
+    filename = file_path[len(prefix) :]
+    if "/" not in filename and "\\" not in filename:
+        _delete_generated_filename(filename)
 
 
 async def _index_record(record: MedicalRecordModel) -> None:
@@ -80,7 +99,7 @@ async def _index_record(record: MedicalRecordModel) -> None:
 
 
 @router.get("/status")
-async def system_status():
+async def system_status(doctor: UserModel = Depends(require_doctor)):
     """Report which subsystems are actually live (DB, AI models, vector DB).
 
     Makes silent fallbacks visible: if the AI or database isn't configured on
@@ -91,11 +110,15 @@ async def system_status():
     from services.vector_store import get_vector_store
 
     db = await check_db()
+    vector_status = get_vector_store().status()
     ai_configured = bool(settings.HF_TOKEN or settings.local_llm_configured)
     return {
         "service": "homzdoctor-api",
         "version": "0.1.0",
-        "database": db,
+        "database": {
+            "connected": bool(db.get("connected")),
+            "ephemeral": bool(db.get("ephemeral")),
+        },
         "ai": {
             "configured": ai_configured,
             "llm": {
@@ -109,7 +132,10 @@ async def system_status():
                 "model": settings.LOCAL_LLM_MODEL,
             },
         },
-        "vector_db": get_vector_store().status(),
+        "vector_db": {
+            "available": bool(vector_status.get("available")),
+            "configured": bool(vector_status.get("url_configured")),
+        },
     }
 
 
@@ -263,7 +289,8 @@ async def change_my_password(
 
 
 # Avatar upload limits.
-_AVATAR_MAX_BYTES = 8 * 1024 * 1024  # 8 MB raw upload
+_AVATAR_MAX_BYTES = settings.MAX_AVATAR_FILE_SIZE
+_AVATAR_MAX_PIXELS = 20_000_000
 _AVATAR_SIZE = 256  # output square px
 _AVATAR_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"}
 
@@ -285,10 +312,12 @@ def _encode_avatar(raw: bytes) -> str:
         ) from exc
 
     try:
-        img = Image.open(io.BytesIO(raw))
-        img = img.convert("RGB")
+        with Image.open(io.BytesIO(raw)) as source:
+            w, h = source.size
+            if w <= 0 or h <= 0 or w * h > _AVATAR_MAX_PIXELS:
+                raise ValueError("Image dimensions exceed the avatar limit")
+            img = source.convert("RGB")
         # Center-crop to a square, then resize.
-        w, h = img.size
         side = min(w, h)
         left, top = (w - side) // 2, (h - side) // 2
         img = img.crop((left, top, left + side, top + side))
@@ -321,7 +350,7 @@ async def upload_my_avatar(
             detail=f"Unsupported image type '{ext}'.",
         )
 
-    raw = await file.read()
+    raw = await file.read(_AVATAR_MAX_BYTES + 1)
     if len(raw) > _AVATAR_MAX_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -357,10 +386,10 @@ async def create_medical_record(
 ):
     """Create a new medical record for the authenticated patient."""
     if payload.file_path:
-        try:
-            validate_upload_name(payload.file_path)
-        except UploadValidationError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Upload the medical file through the record upload endpoint; file paths are server-managed.",
+        )
     record = MedicalRecordModel(
         patient_id=current_user.id,
         record_type=payload.record_type,
@@ -465,8 +494,10 @@ async def delete_medical_record(
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
 
+    stored_file_path = record.file_path
     await db.delete(record)
     await db.commit()
+    _cleanup_generated_upload(stored_file_path)
 
 
 @router.post("/medical/records/{record_id}/upload")
@@ -509,9 +540,17 @@ async def upload_medical_file(
             "size": saved.size,
         }
     )
+    previous_file_path = record.file_path
     record.file_path = relative_path
     record.file_metadata = metadata
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        _delete_generated_filename(saved.path.name)
+        raise
+    if previous_file_path != relative_path:
+        _cleanup_generated_upload(previous_file_path)
     await db.refresh(record)
     return {
         "message": "File uploaded",

@@ -33,10 +33,8 @@ class LocalPolicyTests(unittest.TestCase):
             validate_record_update({"diagnosis": "new conclusion"}, doctor_reviewed=True)
         with self.assertRaises(ValueError):
             validate_record_update({"findings": "new findings"}, doctor_reviewed=True)
-        self.assertEqual(
-            validate_record_update({"file_path": "new-file.pdf"}, doctor_reviewed=False),
-            {"file_path": "new-file.pdf"},
-        )
+        with self.assertRaises(ValueError):
+            validate_record_update({"file_path": "new-file.pdf"}, doctor_reviewed=False)
 
 
 class LocalFileStoreTests(unittest.TestCase):
@@ -56,6 +54,15 @@ class LocalFileStoreTests(unittest.TestCase):
             with self.assertRaises(UploadValidationError):
                 store.save("scan.png", b"too large")
             self.assertEqual(list(Path(temp_dir).iterdir()), [])
+
+    def test_generated_upload_cleanup_cannot_escape_the_store(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = LocalFileStore(Path(temp_dir), max_bytes=32)
+            saved = store.save("patient.pdf", b"safe local content")
+            self.assertTrue(store.delete_generated(saved.path.name))
+            self.assertFalse(saved.path.exists())
+            self.assertFalse(store.delete_generated("..\\outside.pdf"))
+            self.assertFalse(store.delete_generated("patient.pdf"))
 
 
 if __name__ == "__main__":

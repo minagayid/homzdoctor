@@ -8,6 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 import json
+import os
+
+try:
+    from .request_limits import RequestBodyLimitMiddleware
+except ImportError:  # Support the documented `python inference/server.py` launch.
+    from request_limits import RequestBodyLimitMiddleware
 
 app = FastAPI(
     title="HomzDoctor ML Inference Server",
@@ -17,14 +23,28 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["content-type"],
 )
 
 # In production, load actual models here
 MODELS_LOADED = False
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=MAX_UPLOAD_BYTES + 1_048_576)
+
+
+async def _check_upload_size(file: UploadFile) -> None:
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    await file.close()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Uploaded file exceeds the 20 MB limit")
 
 
 class ImageAnalysisRequest(BaseModel):
@@ -65,6 +85,7 @@ async def analyze_image(
     region: Optional[str] = None,
 ):
     """Analyze a medical image."""
+    await _check_upload_size(file)
     # In production, this would:
     # 1. Load and preprocess the image (DICOM, NIfTI, etc.)
     # 2. Run through preprocessing pipeline
@@ -92,6 +113,7 @@ async def segment_image(
     segmentation_type: str = "spine",
 ):
     """Segment a medical image."""
+    await _check_upload_size(file)
     # Placeholder for segmentation
     return {
         "segmentation_type": segmentation_type,
@@ -106,6 +128,7 @@ async def preprocess_image(
     operations: List[str] = ["normalize"],
 ):
     """Preprocess a medical image."""
+    await _check_upload_size(file)
     # Placeholder for preprocessing
     return {
         "operations_applied": operations,
@@ -115,4 +138,4 @@ async def preprocess_image(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", "8080")))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,7 @@ _db_path = Path(tempfile.gettempdir()) / "homzdoctor-contract-tests.db"
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_db_path.as_posix()}"
 os.environ["DEBUG"] = "false"
 os.environ["ENVIRONMENT"] = "test"
+os.environ["SEED_DEMO_DATA"] = "false"
 # Remove any database from a prior interrupted run before the application creates its engine.
 _db_path.unlink(missing_ok=True)
 
@@ -50,6 +52,23 @@ class APIContractTests(unittest.TestCase):
         login = self.client.post(
             "/api/v1/auth/login",
             json={"email": email, "password": "patient-password"},
+        )
+        self.assertEqual(login.status_code, 200, login.text)
+        return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    def _create_test_doctor_and_login(self, email: str) -> dict[str, str]:
+        from core.security import hash_password
+
+        with sqlite3.connect(_db_path) as db:
+            db.execute(
+                """INSERT INTO users (email, hashed_password, full_name, role, is_active)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (email, hash_password("doctor-test-password"), "Review Doctor", "doctor", 1),
+            )
+
+        login = self.client.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "doctor-test-password"},
         )
         self.assertEqual(login.status_code, 200, login.text)
         return {"Authorization": f"Bearer {login.json()['access_token']}"}
@@ -157,6 +176,7 @@ class APIContractTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_doctor_review_is_required_before_prescription_creation(self):
+        doctor_headers = self._create_test_doctor_and_login("review-doctor@example.test")
         patient_headers = self._register_and_login("review-patient@example.test")
         patient = self.client.get("/api/v1/auth/me", headers=patient_headers).json()
         record = self.client.post(
@@ -166,18 +186,11 @@ class APIContractTests(unittest.TestCase):
         ).json()
         before_review = self.client.post(
             "/api/v1/prescriptions",
-            headers={
-                "Authorization": f"Bearer {self.client.post('/api/v1/auth/login', json={'email': 'dr.demo@homzdoctor.app', 'password': 'demodoctor'}).json()['access_token']}"
-            },
+            headers=doctor_headers,
             json={"patientId": patient["id"], "recordId": record["id"], "medications": []},
         )
         self.assertEqual(before_review.status_code, 409)
 
-        doctor_login = self.client.post(
-            "/api/v1/auth/login",
-            json={"email": "dr.demo@homzdoctor.app", "password": "demodoctor"},
-        )
-        doctor_headers = {"Authorization": f"Bearer {doctor_login.json()['access_token']}"}
         reviewed = self.client.post(
             f"/api/v1/doctors/review/{record['id']}",
             headers=doctor_headers,

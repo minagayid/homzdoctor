@@ -27,6 +27,7 @@ RUN mkdir -p /app/models
 
 # Expose inference server port
 EXPOSE 8080
+ENV HOST=0.0.0.0 PORT=8080
 
 # Run inference server
 CMD ["python", "inference/server.py"]

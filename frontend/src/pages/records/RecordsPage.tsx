@@ -3,11 +3,11 @@ import type { FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Pencil, Trash2 } from 'lucide-react';
 import { recordsApi } from '../../api';
-import type { MedicalRecordCreate } from '../../api/records.api';
+import type { MedicalRecordCreate, MedicalRecordUpdate } from '../../api/records.api';
 import type { MedicalRecord } from '../../types';
 import { QUERY_KEYS } from '../../lib/constants';
 import { formatDate } from '../../lib/utils';
-import { Button, Card, Input, Badge, Spinner, Modal } from '../../components/ui';
+import { Button, Card, Badge, Spinner, Modal } from '../../components/ui';
 import { PageHeader } from '../../components/layout/PageHeader';
 
 const RECORD_TYPES = [
@@ -50,17 +50,31 @@ export function RecordsPage() {
   const createMutation = useMutation({
     mutationFn: async (payload: MedicalRecordCreate) => {
       const created = await recordsApi.create(payload);
-      if (selectedFile) await recordsApi.uploadFile(created.id, selectedFile);
+      if (selectedFile) {
+        try {
+          await recordsApi.uploadFile(created.id, selectedFile);
+        } catch (uploadError) {
+          try {
+            await recordsApi.remove(created.id);
+          } catch {
+            // The error message asks the user to check the list before retrying.
+          }
+          throw uploadError;
+        }
+      }
       return created;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.records });
       closeForm();
     },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.records });
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: MedicalRecordCreate }) =>
+    mutationFn: ({ id, payload }: { id: number; payload: MedicalRecordUpdate }) =>
       recordsApi.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.records });
@@ -95,7 +109,7 @@ export function RecordsPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (editingId !== null) {
-      updateMutation.mutate({ id: editingId, payload: form });
+      updateMutation.mutate({ id: editingId, payload: { recordType: form.recordType } });
     } else {
       createMutation.mutate(form);
     }
@@ -205,12 +219,11 @@ export function RecordsPage() {
               ))}
             </select>
           </label>
-          <Input
-            label="File name (optional)"
-            placeholder="e.g. chest_xray.dcm"
-            value={form.filePath}
-            onChange={(e) => setForm({ ...form, filePath: e.target.value })}
-          />
+          {editingId !== null && (
+            <p className="text-sm text-slate-500">
+              Current file: {form.filePath || 'No file attached'}
+            </p>
+          )}
           {editingId === null && (
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Medical file</span>
@@ -230,7 +243,7 @@ export function RecordsPage() {
           </p>
           {saveError && (
             <p className="text-sm text-red-600 sm:col-span-2">
-              Could not save the record. Please try again.
+              Could not save the record or upload the selected file. Check the list before retrying.
             </p>
           )}
           <div className="flex justify-end gap-2 sm:col-span-2">

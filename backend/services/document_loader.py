@@ -31,6 +31,8 @@ PDF_EXTS = {".pdf"}
 MAX_PDF_PAGES = int(os.getenv("LVLM_MAX_PDF_PAGES", "8"))
 # DPI used when rasterising PDF pages.
 PDF_RENDER_DPI = int(os.getenv("LVLM_PDF_DPI", "150"))
+MAX_IMAGE_PIXELS = 20_000_000
+MAX_PDF_RENDERED_PIXELS = 40_000_000
 
 
 class DocumentLoadError(Exception):
@@ -64,6 +66,8 @@ def _encode_png(raw: bytes) -> str:
         return base64.b64encode(raw).decode("ascii")
 
     with Image.open(io.BytesIO(raw)) as img:
+        if img.width <= 0 or img.height <= 0 or img.width * img.height > MAX_IMAGE_PIXELS:
+            raise DocumentLoadError(f"Image exceeds the {MAX_IMAGE_PIXELS}-pixel processing limit")
         if img.mode not in ("RGB", "L"):
             img = img.convert("RGB")
         buf = io.BytesIO()
@@ -87,10 +91,19 @@ def _load_pdf(raw: bytes, source_name: str) -> LoadedDocument:
 
     with fitz.open(stream=raw, filetype="pdf") as pdf:
         doc.page_count = pdf.page_count
+        total_rendered_pixels = 0
         for index, page in enumerate(pdf):
             if index >= MAX_PDF_PAGES:
                 break
             text_chunks.append(page.get_text("text") or "")
+            rect = page.rect
+            width = int(rect.width * zoom)
+            height = int(rect.height * zoom)
+            if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
+                raise DocumentLoadError(f"PDF page {index + 1} exceeds the image processing limit")
+            total_rendered_pixels += width * height
+            if total_rendered_pixels > MAX_PDF_RENDERED_PIXELS:
+                raise DocumentLoadError(f"PDF exceeds the {MAX_PDF_RENDERED_PIXELS}-pixel total processing limit")
             pixmap = page.get_pixmap(matrix=matrix)
             doc.images_b64.append(base64.b64encode(pixmap.tobytes("png")).decode("ascii"))
 
