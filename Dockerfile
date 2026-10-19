@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DEBUG=false \
     HOST=0.0.0.0 \
     PORT=8080 \
-    SEED_DEMO_DATA=false
+    SEED_DEMO_DATA=false \
+    MAX_FILE_SIZE=25165824
 
 WORKDIR /app
 
