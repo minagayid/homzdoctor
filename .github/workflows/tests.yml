@@ -40,7 +40,7 @@ jobs:
           docker exec homzdoctor-postgres pg_isready -U homzdoctor -d homzdoctor
           docker run -d --name homzdoctor-api-smoke --network homzdoctor-ci -p 127.0.0.1:18081:8080 \
             -e PORT=8080 -e ENVIRONMENT=production -e DEBUG=false -e SEED_DEMO_DATA=false \
-            -e DATABASE_URL=postgresql+asyncpg://homzdoctor:ci-password@postgres:5432/homzdoctor \
+            -e DATABASE_URL=postgresql+asyncpg://homzdoctor:ci-password@homzdoctor-postgres:5432/homzdoctor \
             -e SECRET_KEY=ci-only-test-key-not-for-real-users-0123456789abcdef \
             -e DATABASE_SSL=off -e ALLOWED_ORIGINS=https://web.example.test -e MAX_FILE_SIZE=25165824 \
             homzdoctor-api:ci
