@@ -1,5 +1,5 @@
-# Optional services for a deployment or multi-user server. Not required for
-# local-only use; no deployment is part of this project pass.
+# Dependencies for production PostgreSQL and optional hosted inference/retrieval adapters.
+# Local SQLite development can use backend/requirements.txt alone.
 asyncpg==0.30.0
 redis==5.0.3
 qdrant-client>=1.12.0
