@@ -73,6 +73,21 @@ class APIContractTests(unittest.TestCase):
         self.assertEqual(login.status_code, 200, login.text)
         return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
+    def test_deactivated_users_cannot_login_or_reuse_existing_tokens(self):
+        headers = self._register_and_login("deactivated@example.test")
+        with sqlite3.connect(_db_path) as db:
+            db.execute("UPDATE users SET is_active = 0 WHERE email = ?", ("deactivated@example.test",))
+
+        existing_token = self.client.get("/api/v1/auth/me", headers=headers)
+        self.assertEqual(existing_token.status_code, 401)
+
+        fresh_login = self.client.post(
+            "/api/v1/auth/login",
+            json={"email": "deactivated@example.test", "password": "patient-password"},
+        )
+        self.assertEqual(fresh_login.status_code, 401)
+        self.assertEqual(fresh_login.json()["detail"], "Incorrect email or password")
+
     def test_registration_cannot_create_a_doctor_account(self):
         response = self.client.post(
             "/api/v1/auth/register",
