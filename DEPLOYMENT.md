@@ -1,9 +1,6 @@
 # HomzDoctor local run guide
 
-Deployment is intentionally out of scope for this project pass. HomzDoctor is
-prepared as a local-first research/demo system and should be run on a trusted
-development machine until clinical, security, privacy, regulatory, and
-operational requirements are independently addressed.
+Google Cloud container build/deployment steps for synthetic test data are documented in [GOOGLE_CLOUD_DEPLOYMENT.md](GOOGLE_CLOUD_DEPLOYMENT.md). HomzDoctor remains a local-first research/demo system, not a clinically validated or compliant production health-record system. The Google Cloud instructions are for testing the container/runtime contract only; do not use real patient records until the care-relationship authorization, durable protected file storage, audit, consent, regulatory and operational requirements below have been independently addressed.
 
 This build has no clinic or doctor-to-patient assignment model: doctor review
 and adherence views are system-wide. It is not suitable for multi-clinic use
