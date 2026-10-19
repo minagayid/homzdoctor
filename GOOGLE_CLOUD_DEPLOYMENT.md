@@ -44,7 +44,7 @@ Create `homzdoctor-database-url` as a Secret Manager secret containing a Postgre
 postgresql+asyncpg://DB_USER:URL_ENCODED_PASSWORD@/DB_NAME?host=/cloudsql/PROJECT_ID:REGION:INSTANCE_NAME
 ```
 
-Grant the Cloud Run service identity Cloud SQL Client access and enable the Cloud SQL instance connection on the service. For Unix-socket connections, set `DATABASE_SSL=off`; use TLS when connecting to PostgreSQL over TCP. Use URL-encoded credentials. `DATABASE_URL` must resolve to PostgreSQL via asyncpg; production rejects SQLite.
+Ensure Cloud Build's service account has `roles/artifactregistry.writer` on the `homzdoctor` Artifact Registry repository. Grant the Cloud Run API service identity `roles/cloudsql.client` and `roles/secretmanager.secretAccessor`; enable the Cloud SQL instance connection on the API service. For Unix-socket connections, set `DATABASE_SSL=off`; use TLS when connecting to PostgreSQL over TCP. Use URL-encoded credentials. `DATABASE_URL` must resolve to PostgreSQL via asyncpg; production rejects SQLite.
 
 The API's production settings also require:
 - `ENVIRONMENT=production` and `DEBUG=false`
