@@ -1,7 +1,6 @@
 # Never bake local secrets, uploads, seeded/demo medical rows, or test fixtures into production images.
 .env
 .env.*
-!.env.example
 tests/
 core/seed.py
 uploads/
