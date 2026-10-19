@@ -53,6 +53,16 @@ class DeploymentContractTests(unittest.TestCase):
         self.assertEqual(config["services"]["backend"]["entrypoint"], "Dockerfile.vercel")
         self.assertEqual(config["services"]["frontend"]["entrypoint"], "Dockerfile.vercel")
         self.assertTrue(any(rule.get("destination", {}).get("service") == "backend" for rule in config["rewrites"]))
+        self.assertTrue(
+            any(rule.get("source") == "/ws" and rule.get("destination", {}).get("service") == "backend"
+                for rule in config["rewrites"]),
+            "the exact /ws path must route to the API service",
+        )
+        self.assertTrue(
+            any(rule.get("source") == "/ws/(.*)" and rule.get("destination", {}).get("service") == "backend"
+                for rule in config["rewrites"]),
+            "WebSocket subpaths must route to the API service",
+        )
         backend = (ROOT / "backend" / "Dockerfile.vercel").read_text(encoding="utf-8")
         frontend = (ROOT / "frontend" / "Dockerfile.vercel").read_text(encoding="utf-8")
         self.assertRegex(backend, r"(?m)^[ \t]+PORT=8080[ \t]*\\$")
