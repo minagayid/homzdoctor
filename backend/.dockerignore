@@ -1,0 +1,12 @@
+# Never bake local secrets, uploads, seeded/demo medical rows, or test fixtures into production images.
+.env
+.env.*
+tests/
+uploads/
+*.db
+*.sqlite
+*.sqlite3
+__pycache__/
+*.py[cod]
+.venv/
+venv/

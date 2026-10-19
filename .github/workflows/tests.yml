@@ -17,6 +17,56 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m unittest discover -s tests -v
+      - name: Build Google Cloud API image
+        working-directory: .
+        run: docker build --tag homzdoctor-api:ci .
+      - name: Smoke-test production API with PostgreSQL
+        working-directory: .
+        run: |
+          set -euo pipefail
+          docker network create homzdoctor-ci
+          cleanup() {
+            docker rm -f homzdoctor-api-smoke homzdoctor-postgres >/dev/null 2>&1 || true
+            docker network rm homzdoctor-ci >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          docker run -d --name homzdoctor-postgres --network homzdoctor-ci \
+            -e POSTGRES_USER=homzdoctor -e POSTGRES_PASSWORD=ci-password -e POSTGRES_DB=homzdoctor \
+            postgres:15-alpine
+          for attempt in $(seq 1 45); do
+            if docker exec homzdoctor-postgres pg_isready -U homzdoctor -d homzdoctor >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          docker exec homzdoctor-postgres pg_isready -U homzdoctor -d homzdoctor
+          docker run -d --name homzdoctor-api-smoke --network homzdoctor-ci -p 127.0.0.1:18081:8080 \
+            -e PORT=8080 -e ENVIRONMENT=production -e DEBUG=false -e SEED_DEMO_DATA=false \
+            -e DATABASE_URL=postgresql+asyncpg://homzdoctor:ci-password@homzdoctor-postgres:5432/homzdoctor \
+            -e SECRET_KEY=ci-only-test-key-not-for-real-users-0123456789abcdef \
+            -e DATABASE_SSL=off -e ALLOWED_ORIGINS=https://web.example.test -e MAX_FILE_SIZE=25165824 \
+            homzdoctor-api:ci
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:18081/health >/tmp/homzdoctor-health.json; then break; fi
+            if [ "$(docker inspect -f '{{.State.Running}}' homzdoctor-api-smoke)" != "true" ]; then
+              docker logs homzdoctor-api-smoke
+              exit 1
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:18081/health
+          register_status=$(curl -sS -o /tmp/homzdoctor-register.json -w '%{http_code}' \
+            -H 'Content-Type: application/json' -d '{"email":"smoke@example.test","fullName":"Smoke Patient","password":"smoke-password"}' \
+            http://127.0.0.1:18081/api/v1/auth/register)
+          test "$register_status" = "201" || { cat /tmp/homzdoctor-register.json; exit 1; }
+          doctor_status=$(curl -sS -o /tmp/homzdoctor-doctor-register.json -w '%{http_code}' \
+            -H 'Content-Type: application/json' -d '{"email":"self-appointed@example.test","fullName":"Untrusted User","password":"smoke-password","role":"doctor"}' \
+            http://127.0.0.1:18081/api/v1/auth/register)
+          case "$doctor_status" in 400|403|422) ;; *) cat /tmp/homzdoctor-doctor-register.json; exit 1 ;; esac
+          token=$(curl -fsS -H 'Content-Type: application/json' \
+            -d '{"email":"smoke@example.test","password":"smoke-password"}' \
+            http://127.0.0.1:18081/api/v1/auth/login | python -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+          curl -fsS -H "Authorization: Bearer $token" http://127.0.0.1:18081/api/v1/auth/me
+      - name: Build backend-local/Railway image
+        run: docker build --file Dockerfile --tag homzdoctor-backend:ci .
 
   frontend:
     runs-on: ubuntu-latest
@@ -32,3 +82,26 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Build frontend image
+        run: docker build --tag homzdoctor-web:ci .
+      - name: Smoke-test NGINX frontend container
+        run: |
+          set -euo pipefail
+          docker run -d --name homzdoctor-web-smoke -p 127.0.0.1:18080:8080 \
+            -e PORT=8080 -e BACKEND_HOST=127.0.0.1 -e BACKEND_PORT=8000 -e BACKEND_SCHEME=http \
+            homzdoctor-web:ci
+          cleanup() { docker rm -f homzdoctor-web-smoke >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:18080/ >/tmp/homzdoctor-web.html; then
+              grep -qi 'HomzDoctor' /tmp/homzdoctor-web.html
+              exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' homzdoctor-web-smoke)" != "true" ]; then
+              docker logs homzdoctor-web-smoke
+              exit 1
+            fi
+            sleep 1
+          done
+          docker logs homzdoctor-web-smoke
+          exit 1

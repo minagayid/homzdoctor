@@ -1,27 +1,28 @@
-# Backend Dockerfile
+# Backend-only image. For Google Cloud Run from the repository root, use ../Dockerfile.
 FROM python:3.11-slim
 
-# Set working directory
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=production \
+    DEBUG=false \
+    SEED_DEMO_DATA=false \
+    HOST=0.0.0.0 \
+    PORT=8000
+
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Install runtime dependencies for both SQLite development and production PostgreSQL.
+# requirements-production.txt supplies asyncpg, Redis, Qdrant and hosted model clients.
+COPY requirements.txt requirements-production.txt ./
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir -r requirements.txt -r requirements-production.txt
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
 COPY . .
 
-# Create upload directory
 RUN mkdir -p /app/uploads
-
-# Expose port
 EXPOSE 8000
 
-# Run application (bind to Railway-provided $PORT, fallback to 8000)
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '8000') + '/health', timeout=4)"
+
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -15,6 +15,10 @@ services:
     environment:
       # asyncpg driver + service hostname (config.normalize_database_url also
       # accepts a plain postgresql:// URL and rewrites it).
+      # This Compose stack is an isolated local/demo environment; cloud images default to production.
+      - ENVIRONMENT=local
+      - DEBUG=false
+      - SEED_DEMO_DATA=${SEED_DEMO_DATA:-false}
       - DATABASE_URL=postgresql+asyncpg://homzdoctor:password@postgres:5432/homzdoctor
       - REDIS_URL=redis://redis:6379/0
       - QDRANT_URL=http://qdrant:6333
@@ -41,7 +45,7 @@ services:
       context: ../../frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
+      - "3000:8080"
     environment:
       - BACKEND_HOST=api
       - BACKEND_PORT=8000

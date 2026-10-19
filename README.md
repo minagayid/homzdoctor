@@ -54,6 +54,12 @@ python -m pip install -r backend\requirements-optional-rag.txt
 - Patient chat retrieval is scoped to curated knowledge plus the authenticated patient’s records.
 - Missing optional models produce explicit offline/fallback states rather than fabricated findings.
 
+## Google Cloud container checks
+
+Cloud Run API and frontend container build/deployment instructions are documented in [GOOGLE_CLOUD_DEPLOYMENT.md](GOOGLE_CLOUD_DEPLOYMENT.md). The production API image requires a non-placeholder secret, explicit HTTPS CORS origins, PostgreSQL/asyncpg, and demo seeding disabled; the build context excludes local database/upload/test files and demo seed code. The frontend NGINX image honors Cloud Run's port and can proxy securely to the backend service.
+
+**Medical-data limitation:** this remains a research/demo application. Doctor review is system-wide and uploaded records still use local filesystem storage, which is ephemeral on Cloud Run. Do not use real patient data until patient-doctor relationship authorization, durable protected object storage, audit and regulatory controls have been implemented and independently reviewed.
+
 ## Tests
 
 ```powershell
