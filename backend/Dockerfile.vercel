@@ -1,4 +1,4 @@
-# Vercel container-service entrypoint. Defaults to Vercel's HTTP port 80.
+# Vercel container-service entrypoint. Uses unprivileged HTTP port 8080; set PORT=8080 in Vercel service settings.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -24,9 +24,9 @@ RUN addgroup --system homzdoctor \
     && chown -R homzdoctor:homzdoctor /app
 
 USER homzdoctor
-EXPOSE 80
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
-  CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '80') + '/health', timeout=4)"]
+  CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '8080') + '/health', timeout=4)"]
 
-CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-80}"]
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]

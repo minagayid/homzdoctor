@@ -51,7 +51,7 @@ Use the OCI-compatible images with Oracle Container Instances, OCI Kubernetes En
 
 ### Vercel container services
 
-Vercel supports Dockerfile.vercel entrypoints for container services and top-level rewrites in vercel.json. Configure the Vercel project framework to Services so its services block is active. /api/* and /health route to FastAPI; all other paths go to NGINX frontend. These images default to port 80, the Vercel container default.
+Vercel supports Dockerfile.vercel entrypoints for container services and top-level rewrites in vercel.json. Configure the Vercel project framework to Services so its services block is active. /api/* and /health route to FastAPI; all other paths go to NGINX frontend. These two services explicitly use port 8080; set PORT=8080 in each Vercel service's environment settings (the API runs as non-root).
 
 Configure DATABASE_URL, SECRET_KEY and ALLOWED_ORIGINS as backend service secrets. Attach managed PostgreSQL and configure vector/AI integrations only if needed. Vercel Services are in beta; the project must be configured to use the Services framework.
 
