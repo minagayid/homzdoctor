@@ -3,7 +3,7 @@ server {
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
-    # Override to 25m on Cloud Run: the default app limit is 24 MiB to stay under the 32 MiB HTTP/1 request limit.
+    # Set MAX_REQUEST_BODY_SIZE=25m on Cloud Run; the API's 24 MiB file limit leaves multipart overhead below the 32 MiB HTTP/1 request limit.
     client_max_body_size ${MAX_REQUEST_BODY_SIZE};
 
     # Resolve the backend host at request time (not at config load), so a
