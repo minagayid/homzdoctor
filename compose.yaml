@@ -1,0 +1,103 @@
+# Full-stack HomzDoctor for a single long-lived Docker host.
+# Copy .env.compose.example to .env and replace placeholders first.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: homzdoctor-api:local
+    restart: unless-stopped
+    init: true
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      SEED_DEMO_DATA: "false"
+      DATABASE_URL: "postgresql+asyncpg://homzdoctor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/homzdoctor"
+      DATABASE_SSL: "off"
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY in .env}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your HTTPS site origin}"
+      REDIS_URL: "redis://redis:6379/0"
+      QDRANT_URL: "http://qdrant:6333"
+      QDRANT_COLLECTION: "homzdoctor_knowledge"
+      EMBEDDING_MODEL: "${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}"
+      EMBEDDING_DIM: "${EMBEDDING_DIM:-384}"
+      HF_TOKEN: "${HF_TOKEN:-}"
+      HF_MODEL: "${HF_MODEL:-Qwen/Qwen3-4B-Instruct}"
+      HF_VLM_MODEL: "${HF_VLM_MODEL:-Qwen/Qwen2.5-VL-7B-Instruct}"
+      UPLOAD_DIR: "/app/uploads"
+      MAX_FILE_SIZE: "${MAX_FILE_SIZE:-25165824}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - homzdoctor_uploads:/app/uploads
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    image: homzdoctor-web:local
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${WEB_PORT:-3000}:8080"
+    environment:
+      PORT: "8080"
+      BACKEND_HOST: "api"
+      BACKEND_PORT: "8080"
+      BACKEND_SCHEME: "http"
+      MAX_REQUEST_BODY_SIZE: "25m"
+    depends_on:
+      api:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "homzdoctor"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      POSTGRES_DB: "homzdoctor"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "homzdoctor", "-d", "homzdoctor"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
+  homzdoctor_uploads:
+  qdrant_data:

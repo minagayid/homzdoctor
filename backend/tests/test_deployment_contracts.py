@@ -37,6 +37,38 @@ class DeploymentContractTests(unittest.TestCase):
         self.assertIn("requirements-production.txt", dockerfile)
         self.assertIn("${PORT:-8000}", dockerfile)
 
+    def test_cloud_build_frontend_uses_its_own_build_context(self):
+        cloudbuild = (ROOT / "cloudbuild-frontend.yaml").read_text(encoding="utf-8")
+        self.assertIn("dir: frontend", cloudbuild)
+        self.assertIn("- Dockerfile", cloudbuild)
+        guide = (ROOT / "GOOGLE_CLOUD_DEPLOYMENT.md").read_text(encoding="utf-8")
+        self.assertIn("--config=cloudbuild-frontend.yaml .", guide)
+
+    def test_vercel_services_have_port_aware_container_entrypoints(self):
+        import json
+
+        config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+        self.assertEqual(config["services"]["backend"]["root"], "backend/")
+        self.assertEqual(config["services"]["frontend"]["root"], "frontend/")
+        self.assertEqual(config["services"]["backend"]["entrypoint"], "Dockerfile.vercel")
+        self.assertEqual(config["services"]["frontend"]["entrypoint"], "Dockerfile.vercel")
+        self.assertTrue(any(rule.get("destination", {}).get("service") == "backend" for rule in config["rewrites"]))
+        backend = (ROOT / "backend" / "Dockerfile.vercel").read_text(encoding="utf-8")
+        frontend = (ROOT / "frontend" / "Dockerfile.vercel").read_text(encoding="utf-8")
+        self.assertIn("PORT=80", backend)
+        self.assertIn("${PORT:-80}", backend)
+        self.assertIn("PORT=80", frontend)
+        self.assertIn("listen ${PORT};", (ROOT / "frontend" / "nginx.conf.template").read_text(encoding="utf-8"))
+
+    def test_full_stack_compose_uses_required_secrets_and_persistent_volumes(self):
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        for value in ("postgres:", "api:", "web:", "qdrant:", "redis:"):
+            self.assertIn(value, compose)
+        self.assertIn("${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD", compose)
+        self.assertIn("${SECRET_KEY:?Set SECRET_KEY", compose)
+        self.assertIn("homzdoctor_uploads:/app/uploads", compose)
+        self.assertIn("postgres_data:", compose)
+
     def test_frontend_nginx_honors_port_and_proxies_https_backend(self):
         dockerfile = (ROOT / "frontend" / "Dockerfile").read_text(encoding="utf-8")
         config = (ROOT / "frontend" / "nginx.conf.template").read_text(encoding="utf-8")

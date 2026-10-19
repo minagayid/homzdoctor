@@ -1,5 +1,7 @@
 # Google Cloud deployment: HomzDoctor
 
+For Docker VM, Vercel container services, AWS/OCI/OVH and generic OCI images, see [Multi-cloud container deployment](MULTI_CLOUD_DEPLOYMENT.md).
+
 This guide builds separate Cloud Run services for the FastAPI API and the static React/NGINX frontend. The images now honor Cloud Run's injected `PORT`; the API image defaults to production mode, requires PostgreSQL and a non-placeholder secret, and does not package or seed demo accounts/medical records.
 
 > **Prototype safety boundary:** HomzDoctor remains a research/demo system, not a clinically validated or compliant production health-record system. Doctor review and adherence views are currently system-wide and there is no doctor-to-patient/care-relationship assignment model. Local upload files are stored on the container filesystem. Do not put real patient data or medical images on Cloud Run until care-relationship authorization, audit/logging, retention/deletion, consent, regulatory, threat-model, and durable object-storage requirements have been independently implemented and reviewed.
@@ -18,7 +20,7 @@ Build/push immutable images from the repository root:
 
 ```sh
 gcloud builds submit --region=us-central1 --config=cloudbuild.yaml .
-gcloud builds submit --region=us-central1 --config=cloudbuild-frontend.yaml frontend
+gcloud builds submit --region=us-central1 --config=cloudbuild-frontend.yaml .
 ```
 
 Image names will be:

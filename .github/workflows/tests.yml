@@ -67,6 +67,8 @@ jobs:
           curl -fsS -H "Authorization: Bearer $token" http://127.0.0.1:18081/api/v1/auth/me
       - name: Build backend-local/Railway image
         run: docker build --file Dockerfile --tag homzdoctor-backend:ci .
+      - name: Build Vercel API container
+        run: docker build --file Dockerfile.vercel --tag homzdoctor-api:vercel-ci .
 
   frontend:
     runs-on: ubuntu-latest
@@ -84,6 +86,8 @@ jobs:
       - run: npm run build
       - name: Build frontend image
         run: docker build --tag homzdoctor-web:ci .
+      - name: Build Vercel frontend container
+        run: docker build --file Dockerfile.vercel --tag homzdoctor-web:vercel-ci .
       - name: Smoke-test NGINX frontend container
         run: |
           set -euo pipefail
@@ -105,3 +109,10 @@ jobs:
           done
           docker logs homzdoctor-web-smoke
           exit 1
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate cross-cloud Compose configuration
+        run: docker compose --env-file .env.compose.example -f compose.yaml config > /tmp/homzdoctor-compose.yaml

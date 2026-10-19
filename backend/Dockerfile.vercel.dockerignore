@@ -1,0 +1,13 @@
+# Vercel is stateless; omit local secrets, fixtures, demo seed rows, and uploads.
+.env
+.env.*
+tests/
+uploads/
+*.db
+*.sqlite
+*.sqlite3
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+core/seed.py
