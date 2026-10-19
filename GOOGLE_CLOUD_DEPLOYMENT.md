@@ -63,7 +63,7 @@ gcloud run deploy homzdoctor-api \
   --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/homzdoctor/homzdoctor-api:BUILD_ID \
   --region=us-central1 --port=8080 --cpu=2 --memory=2Gi --timeout=300 \
   --add-cloudsql-instances=PROJECT_ID:REGION:INSTANCE_NAME \
-  --set-env-vars=ENVIRONMENT=production,DEBUG=false,HOST=0.0.0.0,PORT=8080,SEED_DEMO_DATA=false,DATABASE_SSL=off,ALLOWED_ORIGINS=https://bootstrap.invalid,MAX_FILE_SIZE=25165824 \
+  --set-env-vars=ENVIRONMENT=production,DEBUG=false,HOST=0.0.0.0,SEED_DEMO_DATA=false,DATABASE_SSL=off,ALLOWED_ORIGINS=https://bootstrap.invalid,MAX_FILE_SIZE=25165824 \
   --set-secrets=DATABASE_URL=homzdoctor-database-url:latest,SECRET_KEY=homzdoctor-secret-key:latest \
   --allow-unauthenticated
 ```
@@ -78,7 +78,7 @@ The NGINX image now listens on `PORT` (Cloud Run defaults to 8080) and supports 
 gcloud run deploy homzdoctor-web \
   --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/homzdoctor/homzdoctor-web:BUILD_ID \
   --region=us-central1 --port=8080 --cpu=1 --memory=512Mi \
-  --set-env-vars=PORT=8080,BACKEND_HOST=YOUR_API_HOSTNAME,BACKEND_PORT=443,BACKEND_SCHEME=https,MAX_REQUEST_BODY_SIZE=25m \
+  --set-env-vars=BACKEND_HOST=YOUR_API_HOSTNAME,BACKEND_PORT=443,BACKEND_SCHEME=https,MAX_REQUEST_BODY_SIZE=25m \
   --allow-unauthenticated
 ```
 
