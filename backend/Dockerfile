@@ -3,6 +3,9 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=production \
+    DEBUG=false \
+    SEED_DEMO_DATA=false \
     HOST=0.0.0.0 \
     PORT=8000
 
