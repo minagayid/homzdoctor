@@ -42,7 +42,7 @@ jobs:
             -e PORT=8080 -e ENVIRONMENT=production -e DEBUG=false -e SEED_DEMO_DATA=false \
             -e DATABASE_URL=postgresql+asyncpg://homzdoctor:ci-password@postgres:5432/homzdoctor \
             -e SECRET_KEY=ci-only-test-key-not-for-real-users-0123456789abcdef \
-            -e ALLOWED_ORIGINS=https://web.example.test -e MAX_FILE_SIZE=25165824 \
+            -e DATABASE_SSL=off -e ALLOWED_ORIGINS=https://web.example.test -e MAX_FILE_SIZE=25165824 \
             homzdoctor-api:ci
           for attempt in $(seq 1 45); do
             if curl -fsS http://127.0.0.1:18081/health >/tmp/homzdoctor-health.json; then break; fi
