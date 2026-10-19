@@ -175,7 +175,8 @@ async def login_user(credentials: LoginRequest, db: AsyncSession = Depends(get_d
     user = (
         await db.execute(select(UserModel).where(UserModel.email == credentials.email))
     ).scalar_one_or_none()
-    if not user or not verify_password(credentials.password, user.hashed_password):
+    if not user or not verify_password(credentials.password, user.hashed_password) or not user.is_active:
+        # Keep one response for nonexistent, incorrect-password, and inactive accounts.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
