@@ -112,10 +112,35 @@ class Settings(BaseSettings):
         if self.is_production:
             if self.SEED_DEMO_DATA:
                 raise ValueError("Production must not seed demo accounts or records")
-            if self.SECRET_KEY == "homzdoctor-local-development-key-change-me" or len(self.SECRET_KEY) < 32:
+            known_placeholders = {
+                "homzdoctor-local-development-key-change-me",
+                "change-this-local-development-secret",
+                "dev-secret-change-me-32-characters-min",
+                "changeme",
+                "secret",
+            }
+            secret = self.SECRET_KEY.strip()
+            if secret.lower() in known_placeholders or len(secret) < 32:
                 raise ValueError("Production requires a unique SECRET_KEY of at least 32 characters")
-            if self.is_sqlite:
-                raise ValueError("Production requires a persistent PostgreSQL DATABASE_URL")
+            if self.DEBUG:
+                raise ValueError("DEBUG must be false in production")
+            if not self.DATABASE_URL.startswith("postgresql+asyncpg://"):
+                raise ValueError("Production requires PostgreSQL using the asyncpg driver")
+            origins = self.allowed_origins
+            if not origins or "*" in origins:
+                raise ValueError("Production requires explicit HTTPS entries in ALLOWED_ORIGINS; wildcards are not allowed")
+            for origin in origins:
+                parsed = urlsplit(origin)
+                if (
+                    parsed.scheme != "https"
+                    or not parsed.netloc
+                    or parsed.username
+                    or parsed.password
+                    or parsed.path not in ("", "/")
+                    or parsed.query
+                    or parsed.fragment
+                ):
+                    raise ValueError("Every production ALLOWED_ORIGINS entry must be a bare HTTPS origin")
         return self
 
     @property
