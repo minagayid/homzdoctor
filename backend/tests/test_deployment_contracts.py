@@ -55,9 +55,9 @@ class DeploymentContractTests(unittest.TestCase):
         self.assertTrue(any(rule.get("destination", {}).get("service") == "backend" for rule in config["rewrites"]))
         backend = (ROOT / "backend" / "Dockerfile.vercel").read_text(encoding="utf-8")
         frontend = (ROOT / "frontend" / "Dockerfile.vercel").read_text(encoding="utf-8")
-        self.assertIn("PORT=8080", backend)
+        self.assertRegex(backend, r"(?m)^[ \t]+PORT=8080[ \t]*\\$")
         self.assertIn("${PORT:-8080}", backend)
-        self.assertIn("PORT=8080", frontend)
+        self.assertRegex(frontend, r"(?m)^ENV PORT=8080[ \t]*\\$")
         self.assertIn("listen ${PORT};", (ROOT / "frontend" / "nginx.conf.template").read_text(encoding="utf-8"))
 
     def test_full_stack_compose_uses_required_secrets_and_persistent_volumes(self):
