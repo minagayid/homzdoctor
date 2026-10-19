@@ -1,8 +1,10 @@
 version: '3.8'
 
 # Local full-stack: frontend (nginx) -> api (FastAPI) -> postgres + qdrant + redis.
-# Copy ../../backend/.env.example to a .env next to this file (or export the vars)
-# and set HF_TOKEN to enable the AI agents. Then: `docker compose up --build`.
+# Local development only; prefer the root compose.yaml for the hardened single-host deployment.
+# Create a .env beside this file with POSTGRES_PASSWORD and SECRET_KEY; do not use demo defaults
+# on a networked host. Services are bound to loopback so infrastructure ports are not internet-facing.
+# Then: `docker compose up --build`.
 
 services:
   # HomzDoctor API
@@ -11,7 +13,7 @@ services:
       context: ../../backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     environment:
       # asyncpg driver + service hostname (config.normalize_database_url also
       # accepts a plain postgresql:// URL and rewrites it).
@@ -19,7 +21,10 @@ services:
       - ENVIRONMENT=local
       - DEBUG=false
       - SEED_DEMO_DATA=${SEED_DEMO_DATA:-false}
-      - DATABASE_URL=postgresql+asyncpg://homzdoctor:password@postgres:5432/homzdoctor
+- DATABASE_URL=postgresql+asyncpg://homzdoctor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/homzdoctor
+      - DATABASE_SSL=off
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=25165824
       - REDIS_URL=redis://redis:6379/0
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_COLLECTION=homzdoctor_knowledge
@@ -29,11 +34,14 @@ services:
       - HF_TOKEN=${HF_TOKEN:-}
       - HF_MODEL=${HF_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
       - HF_VLM_MODEL=${HF_VLM_MODEL:-Qwen/Qwen2.5-VL-7B-Instruct}
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-me-32-characters-min}
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
     depends_on:
-      - postgres
-      - redis
-      - qdrant
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
     volumes:
       - ./uploads:/app/uploads
     networks:
@@ -59,10 +67,10 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: homzdoctor
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: homzdoctor
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -72,7 +80,7 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "6333:6333"  # REST/gRPC
+      - "127.0.0.1:${QDRANT_PORT:-6333}:6333"  # REST/gRPC
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -82,7 +90,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     networks:
       - homzdoctor
 
