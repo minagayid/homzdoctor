@@ -1,30 +1,26 @@
-# Frontend Dockerfile
-FROM node:18-alpine AS builder
-
+# Static React frontend served by NGINX; supports Cloud Run's injected PORT.
+FROM node:22-alpine AS builder
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm ci
-
 COPY . .
 RUN npm run build
 
 FROM nginx:alpine
-
+RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
-# Defaults match the docker-compose service name/port for local dev.
-# On Railway, override BACKEND_HOST/BACKEND_PORT with the homzdoctor
-# service's private networking values (see DEPLOYMENT.md).
-ENV BACKEND_HOST=api
-ENV BACKEND_PORT=8000
+# Local Compose defaults; for Cloud Run, BACKEND_HOST is the backend service hostname
+# (no scheme), BACKEND_PORT=443, BACKEND_SCHEME=https, and PORT is injected as 8080.
+ENV PORT=8080 \
+    BACKEND_HOST=api \
+    BACKEND_PORT=8000 \
+    BACKEND_SCHEME=http \
+    NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
-# Opt-in flag required by the base image's 15-local-resolvers.envsh: without
-# it, that script no-ops and NGINX_LOCAL_RESOLVERS is never exported, so
-# envsubst leaves "${NGINX_LOCAL_RESOLVERS}" un-substituted in nginx.conf.
-ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
-
-EXPOSE 80
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD-SHELL wget -q -O /dev/null "http://127.0.0.1:${PORT:-8080}/" || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
