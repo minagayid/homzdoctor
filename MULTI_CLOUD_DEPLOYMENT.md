@@ -51,9 +51,9 @@ Use the OCI-compatible images with Oracle Container Instances, OCI Kubernetes En
 
 ### Vercel container services
 
-Vercel supports Dockerfile.vercel entrypoints for container services and top-level rewrites in vercel.json. Configure the Vercel project framework to Services so its services block is active. /api/* and /health route to FastAPI; all other paths go to NGINX frontend. These two services explicitly use port 8080; set PORT=8080 in each Vercel service's environment settings (the API runs as non-root).
+Vercel supports `Dockerfile.vercel` container entrypoints and top-level rewrites. When Vercel Services is enabled for your account, the root `vercel.json` deploys both services together; `/api/*`, `/health`, `/ws`, and `/ws/*` route to FastAPI, and other paths route to the NGINX frontend. Both containers use port 8080; set `PORT=8080` in each service's environment settings (the API runs as non-root).
 
-Configure DATABASE_URL, SECRET_KEY and ALLOWED_ORIGINS as backend service secrets. Attach managed PostgreSQL and configure vector/AI integrations only if needed. Vercel Services are in beta; the project must be configured to use the Services framework.
+Configure DATABASE_URL, SECRET_KEY and ALLOWED_ORIGINS as backend service secrets. Attach managed PostgreSQL and configure vector/AI integrations only if needed. Vercel Services are currently in beta. If your Vercel account/project cannot use the `services` configuration, deploy the folders as **two separate Vercel projects** instead: (1) create a backend project with Root Directory `backend/`, use its `Dockerfile.vercel`, set `PORT=8080`, and provide the production database and signing secrets; (2) create a frontend project with Root Directory `frontend/`, use its `Dockerfile.vercel`, set `PORT=8080`, `BACKEND_HOST` to the backend deployment hostname only, `BACKEND_PORT=443`, `BACKEND_SCHEME=https`, and `MAX_REQUEST_BODY_SIZE=25m`. Set backend `ALLOWED_ORIGINS` to the frontend HTTPS origin. For this split-project path, the NGINX frontend proxies `/api/*` and `/ws*` to the backend. This is a supported fallback when single-project Services routing is unavailable.
 
 Vercel container functions are stateless and do not provide Compose named volumes. The API currently writes uploads to local container filesystem, so this target is only suitable for synthetic-data validation until uploads move to private durable object storage and the clinical authorization gaps above are closed. An external database alone does not make local file uploads durable.
 
@@ -68,4 +68,4 @@ docker build -t homzdoctor-web:smoke frontend
 
 CI verifies the API image and a production API/PostgreSQL smoke flow, builds the frontend and checks NGINX serving, builds Vercel container entrypoints, and validates Compose configuration. A green image build is not proof of live deployment. After provisioning a provider, verify health, registration/login, an authenticated /api/v1/auth/me, frontend/API routing, database connectivity and restore behavior.
 
-Official provider docs: https://vercel.com/kb/guide/docker ; https://vercel.com/docs/services/routing ; https://docs.cloud.google.com/run/docs/container-contract
+Official provider docs: https://vercel.com/kb/guide/docker ; https://vercel.com/docs/services (currently beta) ; https://vercel.com/docs/services/routing ; https://docs.cloud.google.com/run/docs/container-contract

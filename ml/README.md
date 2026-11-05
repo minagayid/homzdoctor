@@ -85,9 +85,12 @@ ml/
 ## Docker
 
 ```bash
-# Build image
-d韵诗docker build -t homzdoctor-ml:latest .
+# Run from the repository root. The context excludes local models/datasets and uses CPU PyTorch wheels.
+docker build -f ml/Dockerfile -t homzdoctor-ml:local ml
 
-# Run inference server
-docker run -p 127.0.0.1:8080:8080 homzdoctor-ml:latest
+# Start the container on loopback for synthetic-data checks
+docker run --rm --init -p 127.0.0.1:8080:8080 -e PORT=8080 homzdoctor-ml:local
+curl http://127.0.0.1:8080/health
 ```
+
+The current `/analyze`, `/segment`, and `/preprocess` endpoints return placeholder outputs; this image is a deployment scaffold, not a validated model-serving or diagnostic system. Do not send real patient data.

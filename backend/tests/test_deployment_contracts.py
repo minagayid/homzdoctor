@@ -53,6 +53,16 @@ class DeploymentContractTests(unittest.TestCase):
         self.assertEqual(config["services"]["backend"]["entrypoint"], "Dockerfile.vercel")
         self.assertEqual(config["services"]["frontend"]["entrypoint"], "Dockerfile.vercel")
         self.assertTrue(any(rule.get("destination", {}).get("service") == "backend" for rule in config["rewrites"]))
+        self.assertTrue(
+            any(rule.get("source") == "/ws" and rule.get("destination", {}).get("service") == "backend"
+                for rule in config["rewrites"]),
+            "the exact /ws path must route to the API service",
+        )
+        self.assertTrue(
+            any(rule.get("source") == "/ws/(.*)" and rule.get("destination", {}).get("service") == "backend"
+                for rule in config["rewrites"]),
+            "WebSocket subpaths must route to the API service",
+        )
         backend = (ROOT / "backend" / "Dockerfile.vercel").read_text(encoding="utf-8")
         frontend = (ROOT / "frontend" / "Dockerfile.vercel").read_text(encoding="utf-8")
         self.assertRegex(backend, r"(?m)^[ \t]+PORT=8080[ \t]*\\$")
@@ -68,6 +78,51 @@ class DeploymentContractTests(unittest.TestCase):
         self.assertIn("${SECRET_KEY:?Set SECRET_KEY", compose)
         self.assertIn("homzdoctor_uploads:/app/uploads", compose)
         self.assertIn("postgres_data:", compose)
+
+    def test_frontend_default_upload_limit_is_safe_for_cloud_run(self):
+        dockerfile = (ROOT / "frontend" / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("MAX_REQUEST_BODY_SIZE=25m", dockerfile)
+        self.assertNotIn("MAX_REQUEST_BODY_SIZE=101m", dockerfile)
+
+    def test_optional_ml_image_is_portable_non_root_and_excludes_local_medical_data(self):
+        dockerfile = (ROOT / "ml" / "Dockerfile").read_text(encoding="utf-8")
+        ignore = (ROOT / "ml" / ".dockerignore").read_text(encoding="utf-8").splitlines()
+        ml_requirements = (ROOT / "ml" / "requirements.txt").read_text(encoding="utf-8")
+        backend_requirements = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8")
+        self.assertIn("python-multipart==0.0.33", ml_requirements)
+        self.assertIn("python-multipart==0.0.33", backend_requirements)
+        self.assertIn("HOST=0.0.0.0", dockerfile)
+        self.assertIn("PORT=8080", dockerfile)
+        self.assertIn("USER homzdoctor-ml", dockerfile)
+        self.assertIn("HEALTHCHECK", dockerfile)
+        self.assertIn("CMD [\"python\", \"inference/server.py\"]", dockerfile)
+        for pattern in (".env*", "models/", "datasets/", "uploads/", "*.dcm", "*.nii", "*.nii.gz", "*.pt", "*.pth", "*.safetensors"):
+            self.assertIn(pattern, ignore)
+        cloudbuild = (ROOT / "cloudbuild-ml.yaml").read_text(encoding="utf-8")
+        self.assertIn("dir: ml", cloudbuild)
+        self.assertIn("homzdoctor-ml", cloudbuild)
+
+    def test_legacy_local_compose_requires_secrets_and_does_not_expose_database_services_publicly(self):
+        compose = (ROOT / "infra" / "docker" / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn("${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD", compose)
+        self.assertIn("${SECRET_KEY:?Set SECRET_KEY", compose)
+        self.assertNotIn("homzdoctor:password@postgres", compose)
+        for service_port in (
+            '"127.0.0.1:${POSTGRES_PORT:-5432}:5432"',
+            '"127.0.0.1:${QDRANT_PORT:-6333}:6333"',
+            '"127.0.0.1:${REDIS_PORT:-6379}:6379"',
+        ):
+            self.assertIn(service_port, compose)
+        self.assertIn(
+            "      - DATABASE_URL=postgresql+asyncpg://homzdoctor:${POSTGRES_PASSWORD:?",
+            compose,
+        )
+        self.assertNotIn("\n- DATABASE_URL=", compose)
+
+    def test_cloud_run_guide_shows_creation_of_the_database_url_secret(self):
+        guide = (ROOT / "GOOGLE_CLOUD_DEPLOYMENT.md").read_text(encoding="utf-8")
+        self.assertIn("gcloud secrets create homzdoctor-database-url", guide)
+        self.assertIn("--set-secrets=DATABASE_URL=homzdoctor-database-url:latest", guide)
 
     def test_frontend_nginx_honors_port_and_proxies_https_backend(self):
         dockerfile = (ROOT / "frontend" / "Dockerfile").read_text(encoding="utf-8")
