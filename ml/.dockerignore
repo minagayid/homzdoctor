@@ -1,7 +1,6 @@
 # Keep model weights, medical datasets and local cache out of the deployment image.
 .git/
-.env
-.env.*
+.env*
 !.env.example
 .venv/
 venv/

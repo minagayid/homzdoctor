@@ -87,6 +87,10 @@ class DeploymentContractTests(unittest.TestCase):
     def test_optional_ml_image_is_portable_non_root_and_excludes_local_medical_data(self):
         dockerfile = (ROOT / "ml" / "Dockerfile").read_text(encoding="utf-8")
         ignore = (ROOT / "ml" / ".dockerignore").read_text(encoding="utf-8").splitlines()
+        ml_requirements = (ROOT / "ml" / "requirements.txt").read_text(encoding="utf-8")
+        backend_requirements = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8")
+        self.assertIn("python-multipart==0.0.33", ml_requirements)
+        self.assertIn("python-multipart==0.0.33", backend_requirements)
         self.assertIn("HOST=0.0.0.0", dockerfile)
         self.assertIn("PORT=8080", dockerfile)
         self.assertIn("USER homzdoctor-ml", dockerfile)
@@ -103,8 +107,17 @@ class DeploymentContractTests(unittest.TestCase):
         self.assertIn("${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD", compose)
         self.assertIn("${SECRET_KEY:?Set SECRET_KEY", compose)
         self.assertNotIn("homzdoctor:password@postgres", compose)
-        for service_port in ("127.0.0.1:5432:5432", "127.0.0.1:6333:6333", "127.0.0.1:6379:6379"):
+        for service_port in (
+            '"127.0.0.1:${POSTGRES_PORT:-5432}:5432"',
+            '"127.0.0.1:${QDRANT_PORT:-6333}:6333"',
+            '"127.0.0.1:${REDIS_PORT:-6379}:6379"',
+        ):
             self.assertIn(service_port, compose)
+        self.assertIn(
+            "      - DATABASE_URL=postgresql+asyncpg://homzdoctor:${POSTGRES_PASSWORD:?",
+            compose,
+        )
+        self.assertNotIn("\n- DATABASE_URL=", compose)
 
     def test_cloud_run_guide_shows_creation_of_the_database_url_secret(self):
         guide = (ROOT / "GOOGLE_CLOUD_DEPLOYMENT.md").read_text(encoding="utf-8")

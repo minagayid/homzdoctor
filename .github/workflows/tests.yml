@@ -116,3 +116,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate cross-cloud Compose configuration
         run: docker compose --env-file .env.compose.example -f compose.yaml config > /tmp/homzdoctor-compose.yaml
+      - name: Validate legacy local Compose configuration
+        run: docker compose --env-file .env.compose.example -f infra/docker/docker-compose.yml config > /tmp/homzdoctor-legacy-compose.yaml

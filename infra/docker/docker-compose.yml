@@ -21,7 +21,7 @@ services:
       - ENVIRONMENT=local
       - DEBUG=false
       - SEED_DEMO_DATA=${SEED_DEMO_DATA:-false}
-- DATABASE_URL=postgresql+asyncpg://homzdoctor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/homzdoctor
+      - DATABASE_URL=postgresql+asyncpg://homzdoctor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/homzdoctor
       - DATABASE_SSL=off
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=25165824

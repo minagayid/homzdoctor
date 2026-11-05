@@ -38,6 +38,7 @@ Example secrets (input values interactively or through your approved secret-mana
 ```sh
 printf '%s' 'REPLACE_WITH_URL_ENCODED_POSTGRES_PASSWORD' | gcloud secrets create homzdoctor-db-password --data-file=-
 openssl rand -base64 48 | tr -d '\n' | gcloud secrets create homzdoctor-secret-key --data-file=-
+printf '%s' 'REPLACE_WITH_COMPLETE_POSTGRESQL_URL' | gcloud secrets create homzdoctor-database-url --data-file=-
 ```
 
 Create `homzdoctor-database-url` as a Secret Manager secret containing a PostgreSQL SQLAlchemy URL, for example for a Cloud SQL Unix socket:
