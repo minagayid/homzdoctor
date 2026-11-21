@@ -30,7 +30,7 @@ export default function Hero() {
                 to="/register"
                 className="rounded-xl bg-brand-gradient px-6 py-3 text-center font-medium text-white shadow-soft transition-all hover:shadow-glow hover:brightness-[1.03]"
               >
-                Start a symptom check →
+                Explore the research →
               </Link>
               <Link
                 to="#how-it-works"
