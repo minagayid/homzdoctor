@@ -36,7 +36,7 @@ export default function HowItWorks() {
             How HomzDoctor works
           </h2>
           <p className="text-lg text-slate-600">
-            Four simple steps from symptom to care — with physician oversight at every stage.
+            From upload to exploration — with honest labels at every stage.
           </p>
         </div>
 

@@ -35,12 +35,12 @@ export default function DoctorOversight() {
               Human-in-the-loop
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">
-              AI assists. Doctors decide.
+              AI proposes nothing yet. You decide.
             </h2>
             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-              Every medical finding, diagnosis suggestion, and prescription recommendation 
-              goes through a licensed physician before reaching you. AI handles the heavy 
-              lifting — doctors provide the clinical judgment.
+              Every AI output here is an unvalidated research signal shown for your own
+              inspection. Nothing is reviewed by a physician, and any real health decision
+              belongs with a qualified, licensed clinician.
             </p>
             
             <div className="space-y-4 mb-8">
@@ -57,8 +57,8 @@ export default function DoctorOversight() {
             
             <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
               <p className="text-sm text-slate-600">
-                <span className="font-semibold text-teal-600">⭐ 100% doctor-reviewed</span>{' '}
-                — No AI decision reaches you without a licensed physician's approval.
+                <span className="font-semibold text-teal-600">No clinical review occurs here</span>{' '}
+                — AI assistants stay disabled until their models are validated.
               </p>
             </div>
           </div>
@@ -68,7 +68,7 @@ export default function DoctorOversight() {
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
               <img
                 src="/assets/doctor-reviewing-ai.jpg"
-                alt="Licensed doctor reviewing AI analysis on tablet"
+                alt="Research workspace illustration"
                 className="w-full h-auto"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = 'https://placehold.co/600x500/e2e8f0/475569?text=Doctor+reviewing+AI+findings';

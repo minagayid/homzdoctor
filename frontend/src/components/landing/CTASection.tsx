@@ -6,10 +6,10 @@ export default function CTASection() {
     <section className="py-24 bg-gradient-to-br from-teal-600 to-teal-700">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-          Ready for doctor-reviewed AI care?
+          Ready to explore the research?
         </h2>
         <p className="text-lg text-teal-100 mb-8">
-          Join thousands of patients getting clinical-grade insights from home.
+          Free to explore. No clinical services, no payments, no claims.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">

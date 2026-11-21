@@ -34,7 +34,7 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthLayout title="Create your account" subtitle="Start with doctor-reviewed AI care">
+    <AuthLayout title="Create your account" subtitle="Create a free research account">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Full name"

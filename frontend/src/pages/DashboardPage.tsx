@@ -158,7 +158,7 @@ export function DashboardPage() {
               <p className="mt-1 max-w-xl text-teal-50">
                 {isDoctor
                   ? 'Review AI findings, approve prescriptions, and manage appointments — with doctor oversight built in.'
-                  : 'Doctor-reviewed AI care. Track records, prescriptions, and appointments in one secure place.'}
+                  : 'A research workspace. Track records, medications, and uploads in one private place.'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -207,7 +207,7 @@ export function DashboardPage() {
           <StatCard
             icon={ShieldCheck}
             tone="emerald"
-            label="Doctor-reviewed"
+            label="Research use only"
             value={num(records, `${reviewedPct}%`)}
             sublabel={`${reviewedRecords} of ${recordList.length} records`}
             to={PATHS.records}

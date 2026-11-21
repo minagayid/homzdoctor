@@ -27,11 +27,11 @@ export default function FAQ() {
     },
     {
       q: 'Can my doctor use HomzDoctor too?',
-      a: 'Yes! We have a provider portal where your existing doctor can access shared records and see our AI analysis. Many physicians are joining our network to enhance their practice.',
+      a: 'There is no provider portal or physician network. This is a personal research workspace; share exports with your own doctor if you choose.',
     },
     {
       q: 'What happens if the AI detects something serious?',
-      a: 'Our safety escalation system immediately flags concerning findings for priority doctor review. The physician will contact you directly and may recommend immediate in-person care.',
+      a: 'There is no live monitoring or escalation. If you have concerning symptoms, contact a doctor or emergency services directly.',
     },
   ];
 

@@ -4,9 +4,9 @@ import { ArrowLeft, Stethoscope, ShieldCheck, Brain, Lock } from 'lucide-react';
 import { PATHS } from '../../routes/paths';
 
 const highlights = [
-  { icon: ShieldCheck, text: 'Every AI finding reviewed by a licensed doctor' },
-  { icon: Brain, text: 'AI diagnostics for scans, labs, and symptoms' },
-  { icon: Lock, text: 'HIPAA-aligned, end-to-end encrypted' },
+  { icon: ShieldCheck, text: 'No clinical claims: research use only' },
+  { icon: Brain, text: 'AI assistants stay off until models are validated' },
+  { icon: Lock, text: 'Encrypted in transit; not compliance-audited' },
 ];
 
 interface AuthLayoutProps {
@@ -31,10 +31,10 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
 
         <div>
           <h2 className="text-3xl font-bold leading-tight">
-            AI-powered care, with a doctor's final say.
+            Medical AI research, with honesty up front.
           </h2>
           <p className="mt-3 max-w-sm text-teal-100">
-            Clinical-grade insights from home — reviewed by licensed physicians.
+            An open research workspace for records, imaging, and AI experimentation.
           </p>
           <ul className="mt-8 space-y-4">
             {highlights.map(({ icon: Icon, text }) => (
