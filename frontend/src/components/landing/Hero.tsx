@@ -13,17 +13,16 @@ export default function Hero() {
           <div className="text-center md:text-left animate-fade-up">
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 mb-6">
               <Shield className="w-4 h-4" />
-              Reviewed by licensed doctors
+              Research prototype - not for clinical use
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-6">
-              AI-powered care at home.{' '}
-              <span className="text-gradient">Reviewed by real doctors.</span>
+              AI-assisted medical research.{' '}
+              <span className="text-gradient">Honest by design.</span>
             </h1>
             
             <p className="text-lg text-slate-600 mb-8 leading-relaxed max-w-lg mx-auto md:mx-0">
-              HomzDoctor combines advanced AI diagnostics with licensed physician oversight. 
-              Get clinical-grade insights, prescriptions, and care coordination — all from home.
+              HomzDoctor is an open research workspace for AI-assisted medical record and imaging analysis. It provides no diagnosis, prescriptions, or medical advice, and its AI assistants stay off until their models are validated.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start mb-8">
@@ -44,12 +43,12 @@ export default function Hero() {
             <div className="flex items-center gap-4 justify-center md:justify-start text-sm text-slate-500">
               <div className="flex items-center gap-1">
                 <Microscope className="w-4 h-4" />
-                <span>AI + MD review</span>
+                <span>Research use only</span>
               </div>
               <div className="w-1 h-1 bg-slate-300 rounded-full" />
               <div className="flex items-center gap-1">
                 <Sparkles className="w-4 h-4" />
-                <span>HIPAA compliant</span>
+                <span>Encrypted in transit</span>
               </div>
             </div>
           </div>
@@ -133,8 +132,8 @@ export default function Hero() {
                   SC
                 </div>
                 <div className="text-xs">
-                  <p className="font-semibold text-slate-900">Reviewed by Dr. Sarah Chen, MD</p>
-                  <p className="text-slate-500">Internal Medicine · Approved</p>
+                  <p className="font-semibold text-slate-900">Sample output - no doctor review</p>
+                  <p className="text-slate-500">Demo data, not a real case</p>
                 </div>
                 <ShieldCheck className="ml-auto h-5 w-5 text-teal-600" />
               </div>
@@ -146,8 +145,8 @@ export default function Hero() {
                 <Activity className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="text-xs">
-                <p className="font-semibold text-slate-900">Avg. doctor review</p>
-                <p className="text-slate-500">under 2 hours</p>
+                <p className="font-semibold text-slate-900">AI assistants</p>
+                <p className="text-slate-500">in training</p>
               </div>
             </div>
 

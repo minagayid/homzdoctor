@@ -13,14 +13,14 @@ export default function Features() {
   const features = [
     {
       icon: Brain,
-      title: 'AI Diagnostics',
-      desc: 'Automated analysis of X-rays, DICOM scans, and lab reports with clinical-grade accuracy.',
+      title: 'AI Analysis (research)',
+      desc: 'Experimental analysis of X-rays, DICOM scans, and lab reports. Accuracy is unvalidated.',
       color: 'teal',
     },
     {
       icon: Stethoscope,
-      title: 'Doctor Review',
-      desc: 'Every AI finding reviewed, approved, or corrected by a licensed physician.',
+      title: 'Your Review',
+      desc: 'Every AI finding is a research signal you inspect yourself; nothing is doctor-approved.',
       color: 'emerald',
     },
     {
@@ -31,14 +31,14 @@ export default function Features() {
     },
     {
       icon: MessageCircle,
-      title: 'Patient Assistant',
-      desc: '24/7 AI chat copilot answers health questions in plain, understandable language.',
+      title: 'Patient Assistant (in training)',
+      desc: 'AI chat stays disabled until its model finishes training and evaluation.',
       color: 'emerald',
     },
     {
       icon: Pill,
-      title: 'Prescriptions & Adherence',
-      desc: 'Doctor-approved prescriptions plus medication tracking and reminders.',
+      title: 'Medication Tracking',
+      desc: 'Log medications and reminders. No prescriptions are issued anywhere in this app.',
       color: 'teal',
     },
     {
@@ -49,14 +49,14 @@ export default function Features() {
     },
     {
       icon: Calendar,
-      title: 'Appointments',
-      desc: 'Schedule and manage doctor visits — virtual or in-person.',
+      title: 'Appointments (planned)',
+      desc: 'Scheduling is a roadmap item, not a live feature.',
       color: 'teal',
     },
     {
       icon: AlertTriangle,
-      title: 'Safety Escalation',
-      desc: 'Concerning symptoms automatically flagged for immediate human doctor review.',
+      title: 'Safety Escalation (planned)',
+      desc: 'No live monitoring exists here. In an emergency, call your local emergency number.',
       color: 'emerald',
     },
   ];

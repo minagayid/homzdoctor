@@ -9,18 +9,18 @@ export default function DoctorOversight() {
     },
     {
       icon: Users,
-      title: '2. Doctor reviews findings',
-      desc: 'Licensed physician examines every AI-generated insight.',
+      title: '2. You review findings',
+      desc: 'Every AI-generated insight is unvalidated and shown for your own review.',
     },
     {
       icon: FileCheck,
-      title: '3. Clinical decision',
-      desc: 'Doctor approves, adjusts, or requests more information.',
+      title: '3. No clinical decisions',
+      desc: 'The platform makes no diagnoses, prescriptions, or treatment plans.',
     },
     {
       icon: CheckCircle,
-      title: '4. You receive care',
-      desc: 'Final diagnosis, prescription, or treatment plan delivered.',
+      title: '4. Real care stays with clinicians',
+      desc: 'Take anything that matters to a qualified, licensed clinician.',
     },
   ];
 

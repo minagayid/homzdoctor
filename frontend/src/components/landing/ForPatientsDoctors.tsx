@@ -6,16 +6,16 @@ export default function ForPatientsDoctors() {
 
   const patientBenefits = [
     { icon: Clock, title: '24/7 access', desc: 'Get answers anytime, not just during office hours.' },
-    { icon: ShieldIcon, title: 'Doctor-reviewed', desc: 'Every AI finding checked by a real physician.' },
-    { icon: Calendar, title: 'Faster care', desc: 'Reduce wait times from weeks to hours.' },
-    { icon: ChartBar, title: 'Track everything', desc: 'All records, prescriptions, and scans in one place.' },
+    { icon: ShieldIcon, title: 'Self-reviewed', desc: 'Every AI finding is an unvalidated research output you inspect yourself.' },
+    { icon: Calendar, title: 'Organized records', desc: 'Keep imaging and reports in one private place.' },
+    { icon: ChartBar, title: 'Track everything', desc: 'All records, medications, and scans in one place.' },
   ];
 
   const doctorBenefits = [
-    { icon: Briefcase, title: 'Reduce workload', desc: 'AI handles initial analysis and documentation.' },
-    { icon: Clock, title: 'Focus on complex cases', desc: 'Spend time where clinical judgment matters most.' },
-    { icon: ChartBar, title: 'Clinical insights', desc: 'AI highlights patterns you might miss.' },
-    { icon: ShieldIcon, title: 'Better outcomes', desc: 'Catch issues earlier with continuous monitoring.' },
+    { icon: Briefcase, title: 'Research tooling', desc: 'Experiment with AI-assisted analysis pipelines.' },
+    { icon: Clock, title: 'Transparent limits', desc: 'Unvalidated outputs are labeled as such everywhere.' },
+    { icon: ChartBar, title: 'Exploratory insights', desc: 'AI highlights candidate patterns for further study.' },
+    { icon: ShieldIcon, title: 'No outcome claims', desc: 'This prototype makes no clinical-outcome claims.' },
   ];
 
   return (
@@ -23,10 +23,10 @@ export default function ForPatientsDoctors() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-            Built for patients and doctors
+            Built for researchers and the curious
           </h2>
           <p className="text-lg text-slate-600">
-            One platform that serves everyone in the care journey.
+            One workspace for exploring medical AI honestly.
           </p>
         </div>
 
@@ -85,8 +85,8 @@ export default function ForPatientsDoctors() {
 
         <div className="mt-12 text-center">
           <p className="text-sm text-slate-500">
-            <span className="font-semibold text-teal-600">For physicians:</span> Join our medical network —{' '}
-            <a href="#" className="text-teal-600 underline">learn about partnership opportunities</a>
+            <span className="font-semibold text-teal-600">For clinicians:</span> this prototype makes no clinical claims —{' '}
+            <a href="#faq" className="text-teal-600 underline">read the FAQ for its exact limits</a>
           </p>
         </div>
       </div>

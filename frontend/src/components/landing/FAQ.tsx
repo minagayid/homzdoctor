@@ -7,23 +7,23 @@ export default function FAQ() {
   const faqs = [
     {
       q: 'Is HomzDoctor a replacement for my primary care doctor?',
-      a: 'No. HomzDoctor is a complementary tool that works alongside your existing healthcare providers. We provide AI-assisted analysis with doctor oversight, but we don\'t replace your primary care relationship or emergency services.',
+      a: 'No. HomzDoctor is a research prototype for exploring medical AI. It is not a medical service, gives no medical advice, and must never replace your doctors or emergency services.',
     },
     {
       q: 'Who reviews the AI findings?',
-      a: 'Every AI-generated finding, diagnosis suggestion, and prescription recommendation is reviewed by a licensed US-based physician before you see it. You\'ll always know a real doctor has approved your care plan.',
+      a: 'No one. AI outputs are unvalidated research signals shown for experimentation only. Always consult a qualified physician for any health decision.',
     },
     {
       q: 'Is my medical data secure and private?',
-      a: 'Absolutely. We\'re fully HIPAA compliant, use end-to-end encryption, and never sell your data. You maintain full ownership and control over your medical information.',
+      a: 'Connections are encrypted in transit and uploads live in a private per-user database, but this research project has not been audited for HIPAA or any other regulation. Do not upload real patient data.',
     },
     {
       q: 'What can the AI analyze?',
-      a: 'Our AI can analyze medical images (X-rays, DICOM scans, MRIs), lab reports, symptoms, medical history, and medication interactions. All findings are reviewed by a doctor before delivery.',
+      a: 'The goal is analysis of medical images (X-rays, DICOM), lab reports, and symptoms. The AI assistants remain off until their models finish training and evaluation.',
     },
     {
       q: 'How much does HomzDoctor cost?',
-      a: 'We offer flexible plans starting at $19/month for basic AI chat and record storage. Full clinical features including doctor-reviewed diagnostics start at $49/month. Insurance partnerships coming soon.',
+      a: 'Nothing. This is a free research prototype. There are no paid plans, no insurance partnerships, and no clinical services.',
     },
     {
       q: 'Can my doctor use HomzDoctor too?',

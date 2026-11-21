@@ -31,11 +31,11 @@ export default function CTASection() {
         <div className="flex flex-col sm:flex-row gap-6 justify-center text-sm text-teal-100">
           <div className="flex items-center gap-2 justify-center">
             <Shield className="w-4 h-4" />
-            <span>Doctor-reviewed</span>
+            <span>Research use only</span>
           </div>
           <div className="flex items-center gap-2 justify-center">
             <Clock className="w-4 h-4" />
-            <span>No commitment, cancel anytime</span>
+            <span>Free research prototype</span>
           </div>
         </div>
       </div>

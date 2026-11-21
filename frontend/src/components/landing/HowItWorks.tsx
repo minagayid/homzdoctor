@@ -16,14 +16,14 @@ export default function HowItWorks() {
     },
     {
       icon: Stethoscope,
-      title: 'Doctor reviews',
-      desc: 'Licensed physician examines every finding and adds clinical judgment.',
+      title: 'You review',
+      desc: 'Every finding is an unvalidated research output for your own inspection.',
       color: 'bg-teal-100',
     },
     {
       icon: CheckCircle,
-      title: 'Get your care plan',
-      desc: 'Receive diagnosis, prescription, or next steps — all doctor-approved.',
+      title: 'No care plans here',
+      desc: 'Nothing here is a diagnosis, prescription, or next step. Real care stays with your clinicians.',
       color: 'bg-emerald-100',
     },
   ];

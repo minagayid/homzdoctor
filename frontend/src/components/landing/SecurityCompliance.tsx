@@ -4,8 +4,8 @@ export default function SecurityCompliance() {
   const securityItems = [
     {
       icon: Shield,
-      title: 'HIPAA Compliant',
-      desc: 'Enterprise-grade security meeting all regulatory requirements.',
+      title: 'Not compliance-audited',
+      desc: 'A research project: no HIPAA or regulatory audit. Do not upload real patient data.',
     },
     {
       icon: Lock,
@@ -29,8 +29,8 @@ export default function SecurityCompliance() {
     },
     {
       icon: UserCheck,
-      title: 'Doctor Oversight',
-      desc: 'No AI decisions without licensed physician approval.',
+      title: 'Human oversight',
+      desc: 'AI outputs are research signals; any real decision needs a qualified clinician.',
     },
   ];
 

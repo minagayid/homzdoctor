@@ -17,7 +17,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-slate-400">
-              AI-powered care with physician oversight — bringing clinical excellence home.
+              An open research workspace for medical AI - no diagnosis, no prescriptions, no clinical claims.
             </p>
           </div>
 
@@ -36,10 +36,10 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-3">For Doctors</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-teal-400 transition-colors">Join medical network</a></li>
-              <li><a href="#" className="hover:text-teal-400 transition-colors">Provider portal</a></li>
+              
+              
               <li><a href="#" className="hover:text-teal-400 transition-colors">Clinical research</a></li>
-              <li><a href="#" className="hover:text-teal-400 transition-colors">API for EHR</a></li>
+              
             </ul>
           </div>
 
