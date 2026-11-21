@@ -44,31 +44,21 @@ class DeploymentContractTests(unittest.TestCase):
         guide = (ROOT / "GOOGLE_CLOUD_DEPLOYMENT.md").read_text(encoding="utf-8")
         self.assertIn("--config=cloudbuild-frontend.yaml .", guide)
 
-    def test_vercel_services_have_port_aware_container_entrypoints(self):
+    def test_vercel_serverless_deployment_contract(self):
         import json
 
         config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
-        self.assertEqual(config["services"]["backend"]["root"], "backend/")
-        self.assertEqual(config["services"]["frontend"]["root"], "frontend/")
-        self.assertEqual(config["services"]["backend"]["entrypoint"], "Dockerfile.vercel")
-        self.assertEqual(config["services"]["frontend"]["entrypoint"], "Dockerfile.vercel")
-        self.assertTrue(any(rule.get("destination", {}).get("service") == "backend" for rule in config["rewrites"]))
-        self.assertTrue(
-            any(rule.get("source") == "/ws" and rule.get("destination", {}).get("service") == "backend"
-                for rule in config["rewrites"]),
-            "the exact /ws path must route to the API service",
-        )
-        self.assertTrue(
-            any(rule.get("source") == "/ws/(.*)" and rule.get("destination", {}).get("service") == "backend"
-                for rule in config["rewrites"]),
-            "WebSocket subpaths must route to the API service",
-        )
-        backend = (ROOT / "backend" / "Dockerfile.vercel").read_text(encoding="utf-8")
-        frontend = (ROOT / "frontend" / "Dockerfile.vercel").read_text(encoding="utf-8")
-        self.assertRegex(backend, r"(?m)^[ \t]+PORT=8080[ \t]*\\$")
-        self.assertIn("${PORT:-8080}", backend)
-        self.assertRegex(frontend, r"(?m)^ENV PORT=8080[ \t]*\\$")
-        self.assertIn("listen ${PORT};", (ROOT / "frontend" / "nginx.conf.template").read_text(encoding="utf-8"))
+        # Serverless model: /api/* hits the FastAPI function, everything else
+        # falls through to the built frontend (SPA catch-all).
+        self.assertTrue(any("/api/" in rule.get("source", "") for rule in config["rewrites"]))
+        self.assertTrue(any(rule.get("source") == "/(.*)" for rule in config["rewrites"]))
+        entrypoint = (ROOT / "api" / "index.py").read_text(encoding="utf-8")
+        self.assertIn("from main import app", entrypoint)
+        reqs = (ROOT / "api" / "requirements.txt").read_text(encoding="utf-8")
+        for package in ("fastapi", "asyncpg", "sqlalchemy", "python-multipart"):
+            self.assertIn(package, reqs)
+        # WebSocket streaming is not available on Vercel serverless functions;
+        # the assistant uses plain HTTP routes instead.
 
     def test_full_stack_compose_uses_required_secrets_and_persistent_volumes(self):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")

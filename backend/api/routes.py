@@ -47,7 +47,11 @@ lvlm_service = LVLMDiagnosticService()
 pharmacy_service = PharmacyService()
 patient_assistant_service = PatientAssistantService()
 escalation_service = EscalationService()
-file_store = LocalFileStore(settings.upload_dir, max_bytes=settings.MAX_FILE_SIZE)
+file_store = (
+    LocalFileStore(settings.upload_dir, max_bytes=settings.MAX_FILE_SIZE)
+    if settings.UPLOAD_STORAGE != "database"
+    else None
+)
 database_store = DatabaseFileStore(max_bytes=settings.MAX_FILE_SIZE)
 
 
@@ -57,7 +61,8 @@ def _use_database_storage() -> bool:
 
 def _delete_generated_filename(filename: str) -> None:
     try:
-        file_store.delete_generated(filename)
+        if file_store is not None:
+            file_store.delete_generated(filename)
     except OSError:
         logger.exception("Unable to remove generated medical upload during cleanup")
 
@@ -67,6 +72,8 @@ async def _save_upload(db: AsyncSession, filename: str, content: bytes, content_
     if _use_database_storage():
         ref = await database_store.save(db, filename, content, content_type=content_type)
         return f"{settings.upload_dir.name}/{ref.name}", ref.size
+    if file_store is None:
+        raise UploadValidationError("Local upload storage is disabled")
     saved = file_store.save(filename, content)
     relative_path = saved.path.relative_to(settings.upload_dir.resolve()).as_posix()
     return f"{settings.upload_dir.name}/{relative_path}", saved.size
