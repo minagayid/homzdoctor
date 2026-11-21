@@ -81,6 +81,14 @@ class Settings(BaseSettings):
     # Comma-separated text keeps .env files human-friendly on every platform.
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
 
+    @field_validator("UPLOAD_STORAGE")
+    @classmethod
+    def _check_upload_storage(cls, value: str) -> str:
+        normalized = (value or "local").strip().lower()
+        if normalized not in {"local", "database"}:
+            raise ValueError("UPLOAD_STORAGE must be 'local' or 'database'")
+        return normalized
+
     HF_TOKEN: str = ""
     HF_MODEL: str = "Qwen/Qwen3-4B-Instruct"
     HF_VLM_MODEL: str = "Qwen/Qwen2.5-VL-7B-Instruct"
@@ -99,6 +107,10 @@ class Settings(BaseSettings):
     EMBEDDING_DIM: int = 384
 
     UPLOAD_DIR: str = "uploads"
+    # "local" keeps uploads on the container filesystem (fine for a VM with
+    # backups, ephemeral on serverless). "database" stores bytes in Postgres so
+    # uploads survive redeploys.
+    UPLOAD_STORAGE: str = "local"
     MAX_FILE_SIZE: int = 100 * 1024 * 1024
     MAX_AVATAR_FILE_SIZE: int = 8 * 1024 * 1024
 

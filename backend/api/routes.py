@@ -35,7 +35,7 @@ from services.medical import (
     EscalationService,
 )
 from core.config import BASE_DIR, settings
-from core.file_storage import LocalFileStore, UploadValidationError
+from core.file_storage import DatabaseFileStore, LocalFileStore, UploadValidationError, is_generated_name
 from core.policy import registration_role, validate_record_update
 
 router = APIRouter()
@@ -48,6 +48,11 @@ pharmacy_service = PharmacyService()
 patient_assistant_service = PatientAssistantService()
 escalation_service = EscalationService()
 file_store = LocalFileStore(settings.upload_dir, max_bytes=settings.MAX_FILE_SIZE)
+database_store = DatabaseFileStore(max_bytes=settings.MAX_FILE_SIZE)
+
+
+def _use_database_storage() -> bool:
+    return settings.UPLOAD_STORAGE == "database"
 
 
 def _delete_generated_filename(filename: str) -> None:
@@ -57,14 +62,29 @@ def _delete_generated_filename(filename: str) -> None:
         logger.exception("Unable to remove generated medical upload during cleanup")
 
 
-def _cleanup_generated_upload(file_path: Optional[str]) -> None:
+async def _save_upload(db: AsyncSession, filename: str, content: bytes, content_type: str) -> tuple[str, int]:
+    """Persist an upload via the configured store; returns (file_path, size)."""
+    if _use_database_storage():
+        ref = await database_store.save(db, filename, content, content_type=content_type)
+        return f"{settings.upload_dir.name}/{ref.name}", ref.size
+    saved = file_store.save(filename, content)
+    relative_path = saved.path.relative_to(settings.upload_dir.resolve()).as_posix()
+    return f"{settings.upload_dir.name}/{relative_path}", saved.size
+
+
+async def _cleanup_generated_upload(file_path: Optional[str], db: Optional[AsyncSession] = None) -> None:
     """Remove only app-generated uploads referenced through the configured store."""
     prefix = f"{settings.upload_dir.name}/"
     if not isinstance(file_path, str) or not file_path.startswith(prefix):
         return
     filename = file_path[len(prefix) :]
-    if "/" not in filename and "\\" not in filename:
-        _delete_generated_filename(filename)
+    if "/" in filename or "\\" in filename or not is_generated_name(filename):
+        return
+    if _use_database_storage():
+        if db is not None:
+            await database_store.delete_generated(db, filename)
+        return
+    _delete_generated_filename(filename)
 
 
 async def _index_record(record: MedicalRecordModel) -> None:
@@ -498,7 +518,7 @@ async def delete_medical_record(
     stored_file_path = record.file_path
     await db.delete(record)
     await db.commit()
-    _cleanup_generated_upload(stored_file_path)
+    await _cleanup_generated_upload(stored_file_path, db)
 
 
 @router.post("/medical/records/{record_id}/upload")
@@ -527,18 +547,18 @@ async def upload_medical_file(
             detail="Medical file exceeds the configured size limit",
         )
     try:
-        saved = file_store.save(file.filename or "upload", raw)
+        relative_path, saved_size = await _save_upload(
+            db, file.filename or "upload", raw, file.content_type or "application/octet-stream"
+        )
     except UploadValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
-    relative_path = saved.path.relative_to(settings.upload_dir.resolve()).as_posix()
-    relative_path = f"{settings.upload_dir.name}/{relative_path}"
     metadata = dict(record.file_metadata or {})
     metadata.update(
         {
             "original_filename": file.filename or "upload",
             "content_type": file.content_type or "application/octet-stream",
-            "size": saved.size,
+            "size": saved_size,
         }
     )
     previous_file_path = record.file_path
@@ -548,16 +568,16 @@ async def upload_medical_file(
         await db.commit()
     except Exception:
         await db.rollback()
-        _delete_generated_filename(saved.path.name)
+        await _cleanup_generated_upload(relative_path, db)
         raise
     if previous_file_path != relative_path:
-        _cleanup_generated_upload(previous_file_path)
+        await _cleanup_generated_upload(previous_file_path, db)
     await db.refresh(record)
     return {
         "message": "File uploaded",
         "recordId": record.id,
         "filePath": relative_path,
-        "size": saved.size,
+        "size": saved_size,
         "contentType": file.content_type or "application/octet-stream",
     }
 
@@ -1054,12 +1074,12 @@ async def diagnose_medical_file(
             detail="Medical file exceeds the configured size limit",
         )
     try:
-        saved = file_store.save(file.filename or "upload", raw)
+        relative_path, saved_size = await _save_upload(
+            db, file.filename or "upload", raw, file.content_type or "application/octet-stream"
+        )
     except UploadValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
-    relative_path = saved.path.relative_to(settings.upload_dir.resolve()).as_posix()
-    relative_path = f"{settings.upload_dir.name}/{relative_path}"
     record = MedicalRecordModel(
         patient_id=current_user.id,
         record_type=(modality or "unknown").lower(),
@@ -1067,7 +1087,7 @@ async def diagnose_medical_file(
         file_metadata={
             "original_filename": file.filename or "upload",
             "content_type": file.content_type or "application/octet-stream",
-            "size": saved.size,
+            "size": saved_size,
         },
         status="pending",
     )
@@ -1121,12 +1141,20 @@ async def analyze_medical_data(
     ).scalar_one_or_none()
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
-    stored_path = BASE_DIR / record.file_path
-    if not stored_path.exists():
-        stored_path = settings.upload_dir / Path(record.file_path).name
-    if not stored_path.exists():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Stored upload is unavailable")
-    result = await lvlm_service.analyze_path(str(stored_path), modality=record.record_type)
+    if _use_database_storage():
+        stored_bytes = await database_store.read(db, Path(record.file_path).name)
+        if stored_bytes is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Stored upload is unavailable")
+        result = await lvlm_service.analyze_file(
+            file_bytes=stored_bytes, filename=Path(record.file_path).name, modality=record.record_type
+        )
+    else:
+        stored_path = BASE_DIR / record.file_path
+        if not stored_path.exists():
+            stored_path = settings.upload_dir / Path(record.file_path).name
+        if not stored_path.exists():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Stored upload is unavailable")
+        result = await lvlm_service.analyze_path(str(stored_path), modality=record.record_type)
     analysis_id = str(uuid.uuid4())
     db.add(
         AnalysisRunModel(

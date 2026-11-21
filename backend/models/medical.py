@@ -2,7 +2,7 @@
 SQLAlchemy models for HomzDoctor.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON, LargeBinary
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -183,4 +183,20 @@ class AnalysisRun(Base):
     modality = Column(String(50), nullable=False)
     status = Column(String(50), default="completed", nullable=False)
     result = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UploadBlob(Base):
+    """Database-persisted upload payload for the serverless storage mode.
+
+    Bytes live here instead of the filesystem so private uploads survive
+    container redeploys. Only app-generated names are accepted by the store.
+    """
+    __tablename__ = "upload_blobs"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(80), unique=True, index=True, nullable=False)
+    content = Column(LargeBinary, nullable=False)
+    size = Column(Integer, nullable=False)
+    content_type = Column(String(120), nullable=False, default="application/octet-stream")
     created_at = Column(DateTime, default=datetime.utcnow)
