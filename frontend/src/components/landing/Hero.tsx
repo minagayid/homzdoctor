@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Microscope, Sparkles, Brain, CheckCircle2, ShieldCheck, Activity } from 'lucide-react';
+import { Shield, Microscope, Sparkles, Brain, ShieldCheck, Activity } from 'lucide-react';
 
 export default function Hero() {
   return (
@@ -65,75 +65,36 @@ export default function Hero() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-slate-900">AI Analysis</p>
-                    <p className="text-xs text-slate-400">Chest X-ray · just now</p>
+                    <p className="text-xs text-slate-400">Integration pending</p>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Complete
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
+                  Disabled
                 </span>
               </div>
 
-              {/* Scan preview with pulse line */}
-              <div className="relative mb-4 h-40 overflow-hidden rounded-xl bg-slate-900">
-                <svg
-                  viewBox="0 0 300 160"
-                  preserveAspectRatio="none"
-                  className="absolute inset-0 h-full w-full"
-                >
-                  <defs>
-                    <pattern id="heroGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M20 0 L0 0 0 20" fill="none" stroke="#1e293b" strokeWidth="1" />
-                    </pattern>
-                  </defs>
-                  <rect width="300" height="160" fill="url(#heroGrid)" opacity="0.6" />
-                  <polyline
-                    points="0,100 45,100 65,45 85,125 105,100 150,100 170,60 190,108 235,100 270,100 285,70 300,100"
-                    fill="none"
-                    stroke="#2dd4bf"
-                    strokeWidth="2.5"
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                {/* Sweeping analysis line */}
-                <div className="absolute inset-x-0 top-0 h-8 animate-scan-sweep bg-gradient-to-b from-brand-400/40 to-transparent" />
-                <span className="absolute left-2 top-2 font-mono text-[10px] text-brand-300/80">
-                  SCAN_0481.dcm
-                </span>
-                <span className="absolute right-2 top-2 flex items-center gap-1 font-mono text-[10px] text-brand-300/80">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-brand-400" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-400" />
-                  </span>
-                  ANALYZING
-                </span>
+              {/* Disabled state placeholder */}
+              <div className="relative mb-4 flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 text-center">
+                <Brain className="h-6 w-6 text-slate-400" />
+                <p className="text-sm font-medium text-slate-600">No model connected</p>
+                <p className="text-xs text-slate-500">
+                  AI findings appear here only after a validated model endpoint is configured.
+                </p>
               </div>
 
-              {/* Finding + confidence */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">Finding</span>
-                  <span className="text-sm font-medium text-slate-900">No acute abnormality</span>
-                </div>
-                <div>
-                  <div className="mb-1 flex justify-between text-xs text-slate-500">
-                    <span>Confidence</span>
-                    <span>92%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-slate-100">
-                    <div className="h-2 w-[92%] rounded-full bg-teal-600" />
-                  </div>
-                </div>
+              {/* What works today */}
+              <div className="space-y-2 text-xs text-slate-500">
+                <p className="font-semibold text-slate-700">Working today</p>
+                <p>Accounts, medical records, and file uploads.</p>
+                <p className="pt-1 font-semibold text-slate-700">Not yet</p>
+                <p>AI findings, confidence scores, and chat assistants.</p>
               </div>
 
               {/* Doctor review footer */}
               <div className="mt-4 flex items-center gap-3 rounded-lg border border-teal-100 bg-teal-50/60 p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-xs font-semibold text-white">
-                  SC
-                </div>
                 <div className="text-xs">
-                  <p className="font-semibold text-slate-900">Sample output - no doctor review</p>
-                  <p className="text-slate-500">Demo data, not a real case</p>
+                  <p className="font-semibold text-slate-900">No AI output is shown as medical fact</p>
+                  <p className="text-slate-500">Nothing here is reviewed by a doctor</p>
                 </div>
                 <ShieldCheck className="ml-auto h-5 w-5 text-teal-600" />
               </div>
