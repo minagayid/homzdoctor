@@ -74,8 +74,17 @@ AsyncSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
-# Base model for SQLAlchemy
-Base = declarative_base()
+# Base model for SQLAlchemy. On a shared managed database, DB_SCHEMA
+# qualifies every table with its own schema (server startup settings such as
+# search_path can be dropped by connection poolers, so the schema is baked
+# into the mapping itself).
+_DB_SCHEMA = os.getenv("DB_SCHEMA", "").strip() or None
+if _DB_SCHEMA:
+    from sqlalchemy import MetaData
+
+    Base = declarative_base(metadata=MetaData(schema=_DB_SCHEMA))
+else:
+    Base = declarative_base()
 
 
 async def get_db():
