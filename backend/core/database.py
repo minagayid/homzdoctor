@@ -3,6 +3,7 @@ Database configuration and setup for HomzDoctor.
 """
 
 import logging
+import os
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -32,9 +33,15 @@ def _build_connect_args() -> dict:
         # Default ON unless explicitly disabled, but skip it for a local host.
         host_is_local = any(h in settings.DATABASE_URL for h in ("@localhost", "@127.0.0.1", "@postgres", "@db"))
         want_ssl = os.getenv("DATABASE_SSL", "auto").lower()
-        if want_ssl == "off" or (want_ssl == "auto" and host_is_local):
-            return {}
-        return {"ssl": True}
+        args: dict = {}
+        if not (want_ssl == "off" or (want_ssl == "auto" and host_is_local)):
+            args["ssl"] = True
+        # Optional schema isolation: when several apps share one managed
+        # database, DB_SCHEMA pins this app's tables to their own schema.
+        db_schema = os.getenv("DB_SCHEMA", "").strip()
+        if db_schema:
+            args["server_settings"] = {"search_path": db_schema}
+        return args
     return {}
 
 
@@ -85,7 +92,12 @@ async def init_db():
     # Import models so their tables register on Base.metadata before create_all.
     import models.medical  # noqa: F401
 
+    db_schema = os.getenv("DB_SCHEMA", "").strip()
     async with engine.begin() as conn:
+        if db_schema:
+            # Shared managed databases (e.g. one Neon store backing several
+            # apps) isolate this app's tables in their own schema.
+            await conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{db_schema}"'))
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
 
