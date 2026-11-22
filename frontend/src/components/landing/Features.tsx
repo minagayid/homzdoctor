@@ -1,5 +1,4 @@
 import {
-  Brain,
   Stethoscope,
   FileText,
   MessageCircle,
@@ -11,12 +10,6 @@ import {
 export default function Features() {
   const features = [
     {
-      icon: Brain,
-      title: 'AI Analysis (research)',
-      desc: 'Experimental analysis of X-rays, DICOM scans, and lab reports. Accuracy is unvalidated.',
-      color: 'teal',
-    },
-    {
       icon: Stethoscope,
       title: 'Your Review',
       desc: 'Every AI finding is a research signal you inspect yourself; nothing is doctor-approved.',
@@ -25,7 +18,7 @@ export default function Features() {
     {
       icon: FileText,
       title: 'Medical Records',
-      desc: 'Securely upload and track imaging, DICOM files, and reports in one place.',
+      desc: 'Upload and track imaging, DICOM files, and reports in one place.',
       color: 'teal',
     },
     {
