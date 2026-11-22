@@ -42,9 +42,6 @@ export default function FAQ() {
           <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
             Questions? We have answers.
           </h2>
-          <p className="text-lg text-slate-600">
-            Everything you need to know about AI-powered, doctor-reviewed care.
-          </p>
         </div>
 
         <div className="space-y-4">

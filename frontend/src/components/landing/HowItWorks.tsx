@@ -1,18 +1,12 @@
-import { Upload, Brain, Stethoscope, CheckCircle } from 'lucide-react';
+import { Upload, Stethoscope, CheckCircle } from 'lucide-react';
 
 export default function HowItWorks() {
   const steps = [
     {
       icon: Upload,
       title: 'Share your health data',
-      desc: 'Upload medical records, describe symptoms, or ask the AI assistant.',
+      desc: 'Upload medical records.',
       color: 'bg-teal-100',
-    },
-    {
-      icon: Brain,
-      title: 'AI analyzes',
-      desc: 'Advanced algorithms review your information against medical knowledge.',
-      color: 'bg-emerald-100',
     },
     {
       icon: Stethoscope,
@@ -40,7 +34,7 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-8 relative">
+        <div className="grid md:grid-cols-3 gap-8 relative">
           {/* Connecting line (desktop) */}
           <div className="hidden md:block absolute top-1/3 left-0 right-0 h-0.5 bg-slate-200 -z-10" />
           

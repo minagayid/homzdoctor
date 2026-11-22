@@ -1,25 +1,20 @@
-import { Brain, CheckCircle, Shield, Users, FileCheck } from 'lucide-react';
+import { CheckCircle, Shield, Users, FileCheck } from 'lucide-react';
 
 export default function DoctorOversight() {
   const steps = [
     {
-      icon: Brain,
-      title: '1. AI analyzes your data',
-      desc: 'Our algorithms review medical records, images, and symptoms.',
-    },
-    {
       icon: Users,
-      title: '2. You review findings',
+      title: '1. You review findings',
       desc: 'Every AI-generated insight is unvalidated and shown for your own review.',
     },
     {
       icon: FileCheck,
-      title: '3. No clinical decisions',
+      title: '2. No clinical decisions',
       desc: 'The platform makes no diagnoses, prescriptions, or treatment plans.',
     },
     {
       icon: CheckCircle,
-      title: '4. Real care stays with clinicians',
+      title: '3. Real care stays with clinicians',
       desc: 'Take anything that matters to a qualified, licensed clinician.',
     },
   ];
@@ -70,15 +65,7 @@ export default function DoctorOversight() {
                 src="/assets/doctor-reviewing-ai.jpg"
                 alt="Research workspace illustration"
                 className="w-full h-auto"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://placehold.co/600x500/e2e8f0/475569?text=Doctor+reviewing+AI+findings';
-                }}
               />
-              <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm p-3 rounded-lg border border-teal-200 shadow-sm">
-                <p className="text-sm font-medium text-teal-800">
-                  ✓ Reviewed by Dr. Sarah Chen, MD — Internal Medicine
-                </p>
-              </div>
             </div>
           </div>
         </div>

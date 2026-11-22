@@ -5,7 +5,6 @@ import Features from '../../components/landing/Features';
 import HowItWorks from '../../components/landing/HowItWorks';
 import DoctorOversight from '../../components/landing/DoctorOversight';
 import ForPatientsDoctors from '../../components/landing/ForPatientsDoctors';
-import Testimonials from '../../components/landing/Testimonials';
 import SecurityCompliance from '../../components/landing/SecurityCompliance';
 import FAQ from '../../components/landing/FAQ';
 import CTASection from '../../components/landing/CTASection';
@@ -25,7 +24,6 @@ export default function LandingPage() {
         <DoctorOversight />
         <HowItWorks />
         <ForPatientsDoctors />
-        <Testimonials />
         <SecurityCompliance />
         <FAQ />
         <CTASection />

@@ -17,7 +17,7 @@ export default function CTASection() {
             to="/register"
             className="inline-flex items-center gap-2 px-6 py-3 bg-white text-teal-600 rounded-lg font-semibold hover:bg-slate-50 transition-colors shadow-md"
           >
-            Start your free assessment
+            Explore the research
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link

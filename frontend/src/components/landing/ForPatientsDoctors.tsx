@@ -5,7 +5,6 @@ export default function ForPatientsDoctors() {
   const [activeTab, setActiveTab] = useState<'patients' | 'doctors'>('patients');
 
   const patientBenefits = [
-    { icon: Clock, title: '24/7 access', desc: 'Get answers anytime, not just during office hours.' },
     { icon: ShieldIcon, title: 'Self-reviewed', desc: 'Every AI finding is an unvalidated research output you inspect yourself.' },
     { icon: Calendar, title: 'Organized records', desc: 'Keep imaging and reports in one private place.' },
     { icon: ChartBar, title: 'Track everything', desc: 'All records, medications, and scans in one place.' },

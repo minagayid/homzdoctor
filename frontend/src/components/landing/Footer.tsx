@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom';
-import { Stethoscope, Twitter, Linkedin, Github, Mail } from 'lucide-react';
+import { Stethoscope, Github } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -28,18 +27,6 @@ export default function Footer() {
               <li><a href="#features" className="hover:text-teal-400 transition-colors">Features</a></li>
               <li><a href="#how-it-works" className="hover:text-teal-400 transition-colors">How it works</a></li>
               <li><a href="#security" className="hover:text-teal-400 transition-colors">Security</a></li>
-              <li><Link to="/pricing" className="hover:text-teal-400 transition-colors">Pricing</Link></li>
-            </ul>
-          </div>
-
-          {/* For Doctors */}
-          <div>
-            <h3 className="font-semibold text-white mb-3">For Doctors</h3>
-            <ul className="space-y-2 text-sm">
-              
-              
-              <li><a href="#" className="hover:text-teal-400 transition-colors">Clinical research</a></li>
-              
             </ul>
           </div>
 
@@ -47,11 +34,6 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-3">Company</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-teal-400 transition-colors">About us</a></li>
-              <li><a href="#" className="hover:text-teal-400 transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-teal-400 transition-colors">Press</a></li>
-              <li><a href="#" className="hover:text-teal-400 transition-colors">Contact</a></li>
-              <li><a href="#" className="hover:text-teal-400 transition-colors">Privacy & Terms</a></li>
             </ul>
           </div>
         </div>
@@ -61,17 +43,8 @@ export default function Footer() {
             © 2024 HomzDoctor. All rights reserved. Not for emergencies.
           </div>
           <div className="flex gap-4">
-            <a href="#" className="text-slate-400 hover:text-teal-400 transition-colors">
-              <Twitter className="w-5 h-5" />
-            </a>
-            <a href="https://www.linkedin.com/in/haroon-sajid-ai/" className="text-slate-400 hover:text-teal-400 transition-colors">
-              <Linkedin className="w-5 h-5" />
-            </a>
             <a href="https://github.com/minagayid/homzdoctor" className="text-slate-400 hover:text-teal-400 transition-colors">
               <Github className="w-5 h-5" />
-            </a>
-            <a href="#" className="text-slate-400 hover:text-teal-400 transition-colors">
-              <Mail className="w-5 h-5" />
             </a>
           </div>
         </div>

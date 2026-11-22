@@ -1,4 +1,4 @@
-import { Shield, Lock, Database, Eye, FileText, UserCheck } from 'lucide-react';
+import { Shield, Eye, UserCheck } from 'lucide-react';
 
 export default function SecurityCompliance() {
   const securityItems = [
@@ -8,24 +8,9 @@ export default function SecurityCompliance() {
       desc: 'A research project: no HIPAA or regulatory audit. Do not upload real patient data.',
     },
     {
-      icon: Lock,
-      title: 'End-to-end Encryption',
-      desc: 'Your data is encrypted at rest and in transit.',
-    },
-    {
-      icon: Database,
-      title: 'Secure Storage',
-      desc: 'Medical records stored in compliant, audited facilities.',
-    },
-    {
       icon: Eye,
       title: 'Access Controls',
       desc: 'You control who sees your medical information.',
-    },
-    {
-      icon: FileText,
-      title: 'Audit Trails',
-      desc: 'Every access to your data is logged and reviewable.',
     },
     {
       icon: UserCheck,
@@ -37,15 +22,6 @@ export default function SecurityCompliance() {
   return (
     <section id="security" className="py-24 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-            Security & compliance you can trust
-          </h2>
-          <p className="text-lg text-slate-600">
-            Your health data deserves the highest level of protection. We meet or exceed 
-            all clinical and privacy standards.
-          </p>
-        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {securityItems.map((item) => (
