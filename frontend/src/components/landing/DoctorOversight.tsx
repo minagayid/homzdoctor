@@ -22,7 +22,7 @@ export default function DoctorOversight() {
   return (
     <section className="py-24 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-2xl">
           {/* Left content */}
           <div>
             <div className="inline-flex items-center gap-2 bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-sm font-medium mb-6">
@@ -58,16 +58,6 @@ export default function DoctorOversight() {
             </div>
           </div>
           
-          {/* Right image placeholder */}
-          <div className="relative">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-              <img
-                src="/assets/doctor-reviewing-ai.jpg"
-                alt="Research workspace illustration"
-                className="w-full h-auto"
-              />
-            </div>
-          </div>
         </div>
       </div>
     </section>
